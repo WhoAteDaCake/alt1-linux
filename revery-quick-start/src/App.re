@@ -8,10 +8,21 @@ module Styles = {
   let text = [marginTop(24), color(Color.hex(Theme.darkBlue))];
 };
 
+Revery.App.initConsole();
+
+Timber.App.enable();
+Timber.App.setLevel(Timber.Level.info);
+
+Helpers.run();
+
 let%component main = () => {
   let%hook (count, setCount) = React.Hooks.state(0);
 
-  let increment = () => setCount(count => count + 1);
+  let increment = () => {
+    setCount(count => count + 1);
+    Helpers.run();
+  };
+
 
   <Center>
     <Padding padding=24>
@@ -31,10 +42,11 @@ let%component main = () => {
 };
 
 let init = app => {
-  Revery.App.initConsole();
+  /* Revery.App.initConsole();
 
   Timber.App.enable();
-  Timber.App.setLevel(Timber.Level.perf);
+  Timber.App.setLevel(Timber.Level.info); */
+  /* Timber.App.setLevel(Timber.Level.perf); */
 
   let win =
     App.createWindow(
@@ -53,4 +65,4 @@ let init = app => {
   ();
 };
 
-App.start(init);
+/* App.start(init); */
