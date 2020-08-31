@@ -13,18 +13,37 @@ Revery.App.initConsole();
 Timber.App.enable();
 Timber.App.setLevel(Timber.Level.info);
 
-Helpers.run();
+/* Helpers.run(); */
 
 let%component main = () => {
-  let%hook (count, setCount) = React.Hooks.state(0);
+  let%hook (route, redirect) = Router.useRoute();
+  /* let%hook (count, setCount) = React.Hooks.state(0); */
 
-  let increment = () => {
+  /* let increment = () => {
     setCount(count => count + 1);
     Helpers.run();
-  };
-
-
+  }; */
   <Center>
+    <Row>
+      <Router
+        render={route => switch(route) {
+          | SelectWindow => <Text text="SelectWindow"/>
+          | SelectBoundingBox => <Text text="SelectBoundingBox"/>
+        }}
+      />
+    </Row>
+    <Row>
+      <Clickable onClick={_ => {
+        print_endline("Programmatic redirection");
+        redirect(SelectBoundingBox);
+      }}>
+        <Text
+          text="Click me"
+        />
+      </Clickable>
+    </Row>
+  </Center>
+  /* <Center>
     <Padding padding=24>
       <Row>
         <AnimatedText delay={Time.ms(0)} text="Welcome" />
@@ -38,7 +57,7 @@ let%component main = () => {
       style=Styles.text
       text={"Times clicked: " ++ string_of_int(count)}
     />
-  </Center>;
+  </Center>; */
 };
 
 let init = app => {
