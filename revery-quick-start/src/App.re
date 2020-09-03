@@ -23,25 +23,25 @@ let%component main = () => {
     setCount(count => count + 1);
     Helpers.run();
   }; */
-  <Center>
+  <Center >
     <Row>
       <Router
         render={route => switch(route) {
-          | SelectWindow => <Text text="SelectWindow"/>
-          | SelectBoundingBox => <Text text="SelectBoundingBox"/>
+          | SelectWindow => <SelectWindow />
+          | SelectBoundingBox => <Text style=Styles.text text="SelectBoundingBox"/>
         }}
       />
     </Row>
-    <Row>
+    /* <Row>
       <Clickable onClick={_ => {
-        print_endline("Programmatic redirection");
-        redirect(SelectBoundingBox);
+        let _ = redirect(SelectBoundingBox);
       }}>
         <Text
+          style=Styles.text
           text="Click me"
         />
       </Clickable>
-    </Row>
+    </Row> */
   </Center>
   /* <Center>
     <Padding padding=24>
@@ -84,4 +84,4 @@ let init = app => {
   ();
 };
 
-/* App.start(init); */
+App.start(init);
