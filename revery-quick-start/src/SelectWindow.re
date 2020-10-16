@@ -9,7 +9,6 @@ let%component make = () => {
   
   let content = switch(windowIds) {
     | [] => <Loading />
-    /* | [] => <Text text="Hello"/> */
     | _ => React.listToElement(windows)
   };
 

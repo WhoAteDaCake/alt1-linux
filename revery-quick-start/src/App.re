@@ -23,15 +23,17 @@ let%component main = () => {
     setCount(count => count + 1);
     Helpers.run();
   }; */
-  <Center >
-    <Row>
+  let style = Style.[
+    color(Color.rgb(0.,0.,0.))
+  ];
+
+  <View style=style>
       <Router
         render={route => switch(route) {
           | SelectWindow => <SelectWindow />
           | SelectBoundingBox => <Text style=Styles.text text="SelectBoundingBox"/>
         }}
       />
-    </Row>
     /* <Row>
       <Clickable onClick={_ => {
         let _ = redirect(SelectBoundingBox);
@@ -42,7 +44,7 @@ let%component main = () => {
         />
       </Clickable>
     </Row> */
-  </Center>
+  </View>
   /* <Center>
     <Padding padding=24>
       <Row>
