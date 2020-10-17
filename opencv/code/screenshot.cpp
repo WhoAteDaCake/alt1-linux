@@ -21,8 +21,8 @@ int main(int argc, char *argv[]) {
     XImage* img{nullptr};
  
     if (!disp) {
-        puts("no display!");
-        return -1;
+      puts("no display!");
+      return -1;
     }
  
     list = (Window*)winlist(disp,&len);
@@ -51,10 +51,7 @@ int main(int argc, char *argv[]) {
         ZPixmap
       );
       cv::Mat cvImg = cv::Mat(attr.height, attr.width, CV_8UC4, img->data);
-      const char* source_window = "Source";
-      cv::namedWindow( source_window );
-      cv::imshow(source_window, cvImg);
-      cv::waitKey();
+      imwrite("test.jpg", cvImg);
     }
 
     if(img != nullptr) {
