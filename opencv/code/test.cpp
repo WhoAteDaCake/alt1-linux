@@ -3,6 +3,8 @@
 #include "opencv2/imgproc.hpp"
 #include <iostream>
 
+#define BEWTEEN(min, max, value) (value >= min && value <= max)
+
 using namespace cv;
 using namespace std;
 
@@ -21,6 +23,11 @@ static double angle( Point pt1, Point pt2, Point pt0 )
 RNG rng(12345);
 
 int main(int argc, char** argv) {
+
+    int min_w = 485;
+    int max_w = 500;
+    int min_h = 90;
+    int max_h = 105;
 
     Mat src_gray;
     CommandLineParser parser( argc, argv, "{@input | HappyFish.jpg | input image}" );
@@ -77,11 +84,10 @@ int main(int argc, char** argv) {
         double t,b,l,r;
         t = cv::norm(nw-ne);
         b = cv::norm(sw-se);
-        l = cv::norm(nw-nw);
+        l = cv::norm(nw-sw);
         r = cv::norm(ne-se);
 
-        // Rectangle expected
-        if (!(t > l && t > r && b > l && b > r) || (t < 200)) {
+        if (!BEWTEEN(min_h, max_h, l) || !BEWTEEN(min_w, max_w, t)) {
             continue;
         }
 
@@ -89,10 +95,6 @@ int main(int argc, char** argv) {
 
         Scalar color = Scalar( rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256) );
         rectangle(src, nw, se, color, 2);
-        // circle( src, ne, 5,  Scalar(255, 0, 0), 2, 8, 0);
-        // circle( src, nw, 5,  Scalar(0, 255, 0), 2, 8, 0);
-        // circle( src, se, 5,  Scalar(0, 0, 255), 2, 8, 0);
-        // circle( src, sw, 5,  Scalar(255, 255, 255), 2, 8, 0);
     }
 
 
