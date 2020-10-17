@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
         r = cv::norm(ne-se);
 
         // Rectangle expected
-        if (!(t > l && t > r && b > l && b > r) || (t < 30)) {
+        if (!(t > l && t > r && b > l && b > r) || (t < 200)) {
             continue;
         }
 
