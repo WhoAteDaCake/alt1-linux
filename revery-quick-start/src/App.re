@@ -2,14 +2,6 @@ open Revery;
 open Revery.UI;
 open Revery.UI.Components;
 
-type test = {
-  first: int,
-  second: int,
-  third: int,
-};
-
-external get_windows: unit => list(int) = "get_windows"
-
 module Styles = {
   open Style;
 
@@ -76,14 +68,7 @@ let init = app => {
   Timber.App.enable();
   Timber.App.setLevel(Timber.Level.info); */
   /* Timber.App.setLevel(Timber.Level.perf); */
-
-  let obj = get_windows();
-  List.iter(l => print_endline(string_of_int(l)), obj);
-  if (List.length(obj) == 0) {
-    print_endline("No runescape windows found")
-  } else {
-    print_endline("Windows found")
-  }
+  /* let style = Styles.[backgroundColor(Color.doubleHex("#17212b"))] */
 
   let win =
     App.createWindow(
@@ -91,7 +76,7 @@ let init = app => {
       "Hello Revery!",
       ~createOptions=
         WindowCreateOptions.create(
-          ~backgroundColor=Color.hex(Theme.lightBlue),
+          ~backgroundColor=Color.doubleHex("#17212b")),
           ~width=512,
           ~height=384,
           (),

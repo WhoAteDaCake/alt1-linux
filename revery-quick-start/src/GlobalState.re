@@ -1,5 +1,5 @@
 type t = {
-  selectedWindowId: option(string),
+  selectedWindowId: option(int),
   windowIds: list(string)
 };
 
