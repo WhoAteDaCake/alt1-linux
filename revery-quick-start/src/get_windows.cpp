@@ -69,6 +69,7 @@ extern "C"
             result = tmp;
           } 
         } 
+        XFree(list);
         XCloseDisplay(disp);
     } else {
       result = caml_alloc(2, 0);
