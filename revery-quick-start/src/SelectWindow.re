@@ -3,14 +3,23 @@ open Revery.UI;
 open Revery.UI.Components;
 
 module WindowRow = {
-  let style = Styles.[`BackgroundColor(Color.doubleHex("#17212b"))];
+  let style = Styles.[`BackgroundColor(Color.hex("#17212b"))];
 
   let make = (~name: string, ~id: int, ()) => {
-    let text = Printf.sprintf("[%s](%d)", name, id);
+    let text = Printf.sprintf("%s (%d)", name, id);
     <Row>
-      <View style=style>
-        <Text style=Styles.textDefault text=text/>
-      </View>
+      <Text
+        style=Styles.withTextDefault(Styles.[`PaddingRight(10)])
+        fontSize=Styles.fontSmall
+        text=text
+      />
+      <Button
+        title="Preview"
+        onClick={() => print_endline("Preview")}
+        fontSize=Styles.fontSmall
+        width=80
+        height=20
+      />
     </Row>
   };
 }
@@ -39,9 +48,11 @@ let%component make = () => {
           </Row>
         </Column>
   | xs => {
-
+      let rows = React.listToElement(
+        List.map(({ name, id}: NativeHelpers.window) => <WindowRow name=name id={id} />, windows)
+      );
       <Column>
-        <Text style=Styles.textDefault text="Windows found" />
+        rows
       </Column>
     }
   }}

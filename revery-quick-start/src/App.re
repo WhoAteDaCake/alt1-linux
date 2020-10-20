@@ -76,11 +76,11 @@ let init = app => {
       "Hello Revery!",
       ~createOptions=
         WindowCreateOptions.create(
-          ~backgroundColor=Color.doubleHex("#17212b")),
+          ~backgroundColor=Color.hex("#17212b"),
           ~width=512,
           ~height=384,
           (),
-        ),
+        )
     );
 
   let _update: Revery.UI.renderFunction = UI.start(win, <main />);
