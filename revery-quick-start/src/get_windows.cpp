@@ -69,12 +69,13 @@ extern "C"
             result = tmp;
           } 
         } 
+        XCloseDisplay(disp);
     } else {
       result = caml_alloc(2, 0);
       Store_field(result, 0, Val_long(-1));
       Store_field(result, 1, Val_emptylist);
     }
-    
+
     CAMLreturn(result);
   }
 }
