@@ -13,13 +13,16 @@ let getWindows = (): list(window) => {
 
 external screenshot_window: string => int => int => int => int = "screenshot_window";
 
-let screenshotWindow = (windowId) => {
-  let fileName = "test.png"
-  let retcode = screenshot_window(fileName, windowId, 0, 0);
-  switch (retcode) {
-  | 0 => Ok(fileName)
-  | 1 => Error("No display found")
-  | 2 => Error("No window attributes found")
-  | _ => Error("Unknown return code")
+let screenshotWindow = (~width=0, ~height=0, windowId, fileName) => {
+  if (!(Helpers.contains(fileName, "jpg"))) {
+    Error("Image bust be a jpg type")
+  } else {
+    let retcode = screenshot_window(fileName, windowId, width, height);
+    switch (retcode) {
+    | 0 => Ok(fileName)
+    | 1 => Error("No display found")
+    | 2 => Error("No window attributes found")
+    | n => Error(Printf.sprintf("Unknown return code: [%d]", n))
+    }
   }
 };

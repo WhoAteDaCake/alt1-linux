@@ -5,25 +5,43 @@ module type RouterConfig = {
   let defaultRoute: route;
 };
 
+exception NoHistory(string);
+
 module Make = (RouterConfig: RouterConfig) => {
   include RouterConfig;
 
   module Store = {
     let subscriptions = ref([]);
-    let oldRoute = ref(RouterConfig.defaultRoute);
-    let route = ref(RouterConfig.defaultRoute);
+    let history = ref([]);
+    /* let oldRoute = ref(RouterConfig.defaultRoute);
+    let route = ref(RouterConfig.defaultRoute); */
 
-    let updateRoute = newRoute => {
+    /* let updateRoute = newRoute => {
       oldRoute := route^;
       route := newRoute;
 
       subscriptions^ |> List.iter(sub => sub(oldRoute^, newRoute));
       (oldRoute^, newRoute);
+    }; */
+
+    let push = (route) => {
+      history := [route, ...history^];
+      subscriptions^ |> List.iter(sub => sub(route));
     };
+
+    let pop = () => {
+      /* Return previous route, so we can notify subscribers*/
+      let (cr, xs) = switch (history^) {
+      | [cr, pr, ...xs] => (pr, xs)
+      | _ => raise exception NoHistory("Can't pop with no previous history")
+      };
+      history := [cr, ...xs];
+      subscriptions^ |> List.iter(sub => sub(cr));
+    }
+
 
     let subscribe = cb => {
       subscriptions := List.append(subscriptions^, [cb]);
-
       () => {
         subscriptions := List.filter(c => c !== cb, subscriptions^);
       };

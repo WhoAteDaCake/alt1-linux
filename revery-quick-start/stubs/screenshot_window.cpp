@@ -43,7 +43,7 @@ extern "C"
     int retcode = SUCCESS;
     if (disp) {
       XWindowAttributes attr;
-      if (XGetWindowAttributes(disp, window_id, &attr) != 1) {
+      if (XGetWindowAttributes(disp, window_id, &attr) != 0) {
         img = XGetImage(
           disp,
           window_id,
@@ -55,21 +55,22 @@ extern "C"
           ZPixmap
         );
         cv::Mat cvImg = cv::Mat(attr.height, attr.width, CV_8UC4, img->data);
-        cv::Mat outputImg;
-        // Resize if needed
-        if (width != 0 && height != 0) {
-          float w_ratio = ((float) width) / ((float) attr.width);
-          float h_ratio = ((float) height) / ((float) attr.height);
-          cv::resize(cvImg, outputImg, cv::Size(), w_ratio, h_ratio);
-        } else {
-          outputImg = cvImg;
-        }
-        imwrite(file_name, outputImg);
+        // cv::Mat outputImg;
+        // // Resize if needed
+        // if (width != 0 && height != 0) {
+        //   float w_ratio = ((float) width) / ((float) attr.width);
+        //   float h_ratio = ((float) height) / ((float) attr.height);
+        //   cv::resize(cvImg, outputImg, cv::Size(), w_ratio, h_ratio);
+        // } else {
+        //   outputImg = cvImg;
+        // }
+        // imwrite(file_name, outputImg);
+        imwrite(file_name, cvImg);
       } else {
         retcode = NO_ATTRIBUTES;
       }
     } else {
-      retcode = NO_ATTRIBUTES;
+      retcode = NO_DISPLAY;
     }
     
     if (img != nullptr) {

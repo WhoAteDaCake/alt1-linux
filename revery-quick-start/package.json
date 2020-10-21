@@ -10,7 +10,8 @@
   "esy": {
     "build": "dune build -p App,Stubs",
     "buildDev": "refmterr dune build -p App,Stubs",
-    "buildsInSource": "_build"
+    "buildsInSource": "_build",
+    "install": "esy-installer App.install"
   },
   "revery-packager": {
     "bundleName": "ExampleApp",

@@ -5,7 +5,7 @@
     (flags -g)
     (foreign_stubs (language cxx)
         (names get_windows screenshot_window)
-        (flags -fPIC -Wall -Wextra -Werror --std=c++14 (:include c_flags.sexp))
+        (flags -fPIC --std=c++14 (:include c_flags.sexp))
     )
     (c_library_flags (:include c_library_flags.sexp))
 )

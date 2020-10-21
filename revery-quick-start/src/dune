@@ -6,3 +6,5 @@
     (libraries bigarray Revery Stubs)
     (flags -g)
 )
+
+(include_subdirs unqualified)

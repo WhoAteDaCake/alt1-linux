@@ -1,4 +1,4 @@
-open  LightRouter;
+open ReRouter;
 
 module RouterConfig  = {
 	/* Define your routes */
