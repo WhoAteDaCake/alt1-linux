@@ -12,7 +12,7 @@ let%component make = (~id: int, ()) => {
   let%hook _ = Hooks.effect(
     OnMount,
     () => {
-      let result = NativeHelpers.screenshotWindow(id);
+      let result = Stubs.screenshotWindow(id);
       let nState = switch (result) {
       | Ok(fName) => Loaded(fName)
       | Error(msg) => Failed(msg);

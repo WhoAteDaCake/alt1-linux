@@ -24,7 +24,7 @@ module WindowRow = {
 }
 
 let%component make = () => {
-  let%hook (windows, setWindows) = Hooks.state(NativeHelpers.getWindows());
+  let%hook (windows, setWindows) = Hooks.state(Stubs.getWindows());
   let%hook ({ selectedWindowId, windowIds }: GlobalState.t, setState) = GlobalState.useState();
 
   <View style=Style.[`Padding(20)]>
@@ -39,7 +39,7 @@ let%component make = () => {
           <Row>
             <Button
               title="Refresh"
-              onClick={() => setWindows(_ => NativeHelpers.getWindows())}
+              onClick={() => setWindows(_ => Stubs.getWindows())}
               fontSize=Styles.fontSmall
               width=100
               height=40
@@ -48,7 +48,7 @@ let%component make = () => {
         </Column>
   | xs => {
       let rows = React.listToElement(
-        List.map(({ name, id}: NativeHelpers.window) => <WindowRow name=name id={id} />, windows)
+        List.map(({ name, id}: Stubs.window) => <WindowRow name=name id={id} />, windows)
       );
       <Column>
         rows
