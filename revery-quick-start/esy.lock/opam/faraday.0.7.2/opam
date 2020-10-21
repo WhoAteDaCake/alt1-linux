@@ -12,7 +12,7 @@ build: [
 ]
 depends: [
   "ocaml" {>= "4.02.0"}
-  "dune" {>= "1.0"}
+  "dune" {>= "1.11"}
   "alcotest" {with-test & >= "0.4.1"}
   "bigstringaf"
 ]
@@ -25,6 +25,6 @@ presents the output in a form that makes it possible to use vectorized write
 operations, such as the writev system call, or any other platform or
 application-specific output APIs."""
 url {
-  src: "https://github.com/inhabitedtype/faraday/archive/0.7.1.tar.gz"
-  checksum: "md5=09396dbb4a08323194e092b6bff4aaf6"
+  src: "https://github.com/inhabitedtype/faraday/archive/0.7.2.tar.gz"
+  checksum: "md5=61bb83e1a4bed100eb0bd1365878e3a1"
 }

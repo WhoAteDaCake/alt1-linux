@@ -31,7 +31,7 @@ let%component main = () => {
       <Router
         render={route => switch(route) {
           | SelectWindow => <SelectWindow />
-          | SelectBoundingBox => <Text style=Styles.text text="SelectBoundingBox"/>
+          | WindowPreview(id) => <DisplayPreview id=id />
         }}
       />
     /* <Row>

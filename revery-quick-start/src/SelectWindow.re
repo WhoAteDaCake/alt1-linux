@@ -13,13 +13,12 @@ module WindowRow = {
         fontSize=Styles.fontSmall
         text=text
       />
-      <Button
-        title="Preview"
-        onClick={() => print_endline("Preview")}
-        fontSize=Styles.fontSmall
-        width=80
-        height=20
-      />
+      <Router.RouterLink to_=WindowPreview(id)>
+        <Text
+          text="Preview"
+          fontSize=Styles.fontSmall
+        />
+      </Router.RouterLink>
     </Row>
   };
 }

@@ -1,13 +1,13 @@
 open  LightRouter;
 
-module  RouterConfig  = {
+module RouterConfig  = {
 	/* Define your routes */
 	type route =
   | SelectWindow
-  | SelectBoundingBox
+	| WindowPreview(int)
 
 	/* Set de the default one */
-	let  defaultRoute = SelectWindow;
+	let defaultRoute = SelectWindow;
 };
 
 include Make(RouterConfig);
