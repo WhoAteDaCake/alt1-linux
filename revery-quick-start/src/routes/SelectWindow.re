@@ -25,7 +25,7 @@ module WindowRow = {
 
 let%component make = () => {
   let%hook (windows, setWindows) = Hooks.state(Stubs.getWindows());
-  let%hook ({ selectedWindowId, windowIds }: GlobalState.t, setState) = GlobalState.useState();
+  let%hook ({ selectedWindowId }: GlobalState.t, setState) = GlobalState.useState();
 
   <View style=Style.[`Padding(20)]>
     {switch (windows) {

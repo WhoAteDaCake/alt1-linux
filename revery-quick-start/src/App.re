@@ -45,20 +45,24 @@ let init = app => {
   /* Timber.App.setLevel(Timber.Level.perf); */
   /* let style = Styles.[backgroundColor(Color.doubleHex("#17212b"))] */
 
-  let win =
+  let window =
     App.createWindow(
       app,
       "Hello Revery!",
       ~createOptions=
         WindowCreateOptions.create(
           ~backgroundColor=Color.hex("#17212b"),
-          ~width=512,
-          ~height=384,
+          ~width=Config.defaultSize.width,
+          ~height=Config.defaultSize.height,
           (),
         )
     );
 
-  let _update: Revery.UI.renderFunction = UI.start(win, <main />);
+   Window.onSizeChanged(window, ({width, height}) => GlobalState.update(pState => {
+     {...pState, size: {width, height }}
+   }));
+
+  let _update: Revery.UI.renderFunction = UI.start(window, <main />);
   ();
 };
 

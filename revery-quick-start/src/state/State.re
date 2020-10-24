@@ -11,13 +11,17 @@ module Impl = (T: StateDef) => {
   let prev = ref(T.default);
   let current = ref(T.default);
 
-  let update = newVal => {
+  let get = () => current^;
+
+  let set = newVal => {
     prev := current^;
     current := newVal;
 
     subscriptions^ |> List.iter(sub => sub(prev^, current^));
     (prev^, current^);
   };
+
+  let update = (cb) => set(cb(current^)) |> ignore;
 
   let subscribe = cb => {
     subscriptions := List.append(subscriptions^, [cb]);

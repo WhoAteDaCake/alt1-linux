@@ -1,8 +1,8 @@
 type t = {
   selectedWindowId: option(int),
-  windowIds: list(string)
+  size: Types.size
 };
 
-let default = { selectedWindowId: None, windowIds: []};
+let default = { selectedWindowId: None, size: Config.defaultSize };
 
 include State.Impl({ type nonrec t = t; let default = default;});
