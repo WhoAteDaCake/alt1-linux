@@ -80,12 +80,13 @@ module Make = (RouterConfig: RouterConfig) => {
       Hooks.effect(
         OnMount,
         () => {
+          /* TODO: bug, state updates before dispatch ? */
           let unsubscribe =
             Store.subscribe((newRoute) => {
-              if (newRoute != state.route) {
+              /* if (newRoute != state.route) { */
                 RouterLog.infof(m => m("(%s) Route change [%s] -> [%s]", name, toString(state.route), toString(newRoute)));
                 dispatch(SetRoute(newRoute))
-              }
+              /* } */
             });
           Some(unsubscribe);
         },

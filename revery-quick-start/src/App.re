@@ -22,7 +22,7 @@ let%component main = () => {
 let init = app => {
   Revery.App.initConsole();
 
-  Timber.App.enable();
+  Timber.App.enable(Timber.Reporter.console());
   Timber.App.setLevel(Timber.Level.info);
 
   let window =
