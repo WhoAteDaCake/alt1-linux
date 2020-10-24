@@ -13,12 +13,12 @@ module WindowRow = {
         fontSize=Styles.fontSmall
         text=text
       />
-      <Router.RouterLink to_=WindowPreview(id)>
+      <Router.Link to_=WindowPreview(id)>
         <Text
           text="Preview"
           fontSize=Styles.fontSmall
         />
-      </Router.RouterLink>
+      </Router.Link>
     </Row>
   };
 }

@@ -8,42 +8,22 @@ module Styles = {
   let text = [marginTop(24), color(Color.hex(Theme.darkBlue))];
 };
 
-Revery.App.initConsole();
-
-Timber.App.enable();
-Timber.App.setLevel(Timber.Level.info);
-
-/* Helpers.run(); */
-
 let%component main = () => {
-  let%hook { route }: Router.meta = Router.useRoute();
-  /* let%hook (count, setCount) = React.Hooks.state(0); */
-
-  /* let increment = () => {
-    setCount(count => count + 1);
-    Helpers.run();
-  }; */
-  let style = Style.[
-    color(Color.rgb(0.,0.,0.))
-  ];
+  let%hook { route }: Router.meta = Router.useRoute(~name="App", ());
 
   let content = switch(route) {
   | SelectWindow => <SelectWindow />
   | WindowPreview(id) => <DisplayPreview id=id />
   };
 
-  <View style=style>
-    content
-  </View>
+  <View> content </View>
 };
 
 let init = app => {
-  /* Revery.App.initConsole();
+  Revery.App.initConsole();
 
   Timber.App.enable();
-  Timber.App.setLevel(Timber.Level.info); */
-  /* Timber.App.setLevel(Timber.Level.perf); */
-  /* let style = Styles.[backgroundColor(Color.doubleHex("#17212b"))] */
+  Timber.App.setLevel(Timber.Level.info);
 
   let window =
     App.createWindow(
@@ -58,9 +38,9 @@ let init = app => {
         )
     );
 
-   Window.onSizeChanged(window, ({width, height}) => GlobalState.update(pState => {
-     {...pState, size: {width, height }}
-   }));
+  let _ = Window.onSizeChanged(window, ({width, height}) => GlobalState.update(pState => {
+    {...pState, size: {width, height }}
+  }));
 
   let _update: Revery.UI.renderFunction = UI.start(window, <main />);
   ();

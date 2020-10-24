@@ -1,8 +1,13 @@
-open Revery.UI;
+open Revery;
+open UI;
+
+module RouterLog = (val Log.withNamespace("Router"))
 
 module type RouterConfig = {
   type route;
   let defaultRoute: route;
+  let toString: route => string;
+  let clone: route => route;
 };
 
 exception NoHistory(string);
@@ -17,32 +22,33 @@ module Make = (RouterConfig: RouterConfig) => {
   module Store = {
     let subscriptions = ref([]);
     let history = ref([defaultRoute]);
+    let currentRoute = ref(defaultRoute);
 
     let length = () => List.length(history^);
 
-    let getRoute = () => switch(history^) {
-    | [cr, ...xs] => cr
-    | _ => raise(NoHistory("Should never be in this history state"))
-    };
-
     let push = (route) => {
       history := [route, ...history^];
-      subscriptions^ |> List.iter(apply1(route));
+      currentRoute := route;
+      RouterLog.infof(m => m("Pushed new route: [%s]", toString(route)));
+      List.iter(f => f(route), subscriptions^);
     };
 
     let pop = () => {
       /* Return previous route, so we can notify subscribers*/
-      let (ncr, xs) = switch (history^) {
-      | [cr, pr, ...xs] => (pr, xs)
+      let (cr, ncr, xs) = switch (history^) {
+      | [cr, pr, ...xs] => (cr, pr, xs)
       | _ => raise(NoHistory("Can't pop with no previous history"))
       };
+      
+      RouterLog.infof(m => m("Returning from [%s] to [%s]", toString(cr), toString(ncr)));
       history := [ncr, ...xs];
-      subscriptions^ |> List.iter(apply1(ncr));
+      currentRoute := ncr;
+      List.iter(f => f(ncr), subscriptions^);
     }
 
 
     let subscribe = cb => {
-      subscriptions := List.append(subscriptions^, [cb]);
+      subscriptions := [cb, ...subscriptions^];
       () => {
         subscriptions := List.filter(c => c !== cb, subscriptions^);
       };
@@ -50,23 +56,45 @@ module Make = (RouterConfig: RouterConfig) => {
   };
 
 
-  let useRoute = () => {
-    let%hook (route, setState) = Hooks.state(Store.getRoute());
+  type action =
+  | SetRoute(route);
+
+  type state = { route: route };
+
+  let reducer = (action, _state) => {
+    switch (action) {
+    | SetRoute(route) => { route: route }
+    };
+  };
+
+  let useRoute = (~name="Anonymous", ()) => {
+    let%hook (state, dispatch) =
+      Hooks.reducer(
+        ~initialState={ route: clone(Store.currentRoute^) },
+        reducer,
+      );
+    
+    RouterLog.infof(m => m("(%s) Rendering with state: %s", name, toString(state.route)));
 
     let%hook _ =
       Hooks.effect(
         OnMount,
         () => {
           let unsubscribe =
-            Store.subscribe((newRoute) => {setState(_ => newRoute)});
+            Store.subscribe((newRoute) => {
+              if (newRoute != state.route) {
+                RouterLog.infof(m => m("(%s) Route change [%s] -> [%s]", name, toString(state.route), toString(newRoute)));
+                dispatch(SetRoute(newRoute))
+              }
+            });
           Some(unsubscribe);
         },
       );
-    let result: meta = { route, push: Store.push , pop: Store.pop };
+    let result: meta = { route: state.route, push: Store.push , pop: Store.pop };
     result;
   };
 
-  module RouterLink = {
+  module Link = {
     let make = (~children, ~to_, ~onClick=?, ~style=[], ()) => {
       <Components.Clickable
         onClick={_ => {
@@ -83,7 +111,7 @@ module Make = (RouterConfig: RouterConfig) => {
     };
   };
 
-  module RouterBack = {
+  module Back = {
     let%component make = (~render, ~onClick=?, ~style=[], ()) => {
       let%hook (disabled, setState) = Hooks.state(Store.length() == 0);
       let%hook _ =
@@ -116,5 +144,4 @@ module Make = (RouterConfig: RouterConfig) => {
   let subscribe = Store.subscribe;
   let push = Store.push;
   let pop = Store.pop;
-  let getRoute = Store.getRoute;
 };
