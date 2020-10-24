@@ -7,36 +7,37 @@ module type RouterConfig = {
 
 exception NoHistory(string);
 
+let apply1 = (arg) => f => f(arg);
+
 module Make = (RouterConfig: RouterConfig) => {
   include RouterConfig;
 
+  type meta = { route: route, push: route => unit, pop: unit => unit };
+
   module Store = {
     let subscriptions = ref([]);
-    let history = ref([]);
-    /* let oldRoute = ref(RouterConfig.defaultRoute);
-    let route = ref(RouterConfig.defaultRoute); */
+    let history = ref([defaultRoute]);
 
-    /* let updateRoute = newRoute => {
-      oldRoute := route^;
-      route := newRoute;
+    let length = () => List.length(history^);
 
-      subscriptions^ |> List.iter(sub => sub(oldRoute^, newRoute));
-      (oldRoute^, newRoute);
-    }; */
+    let getRoute = () => switch(history^) {
+    | [cr, ...xs] => cr
+    | _ => raise(NoHistory("Should never be in this history state"))
+    };
 
     let push = (route) => {
       history := [route, ...history^];
-      subscriptions^ |> List.iter(sub => sub(route));
+      subscriptions^ |> List.iter(apply1(route));
     };
 
     let pop = () => {
       /* Return previous route, so we can notify subscribers*/
-      let (cr, xs) = switch (history^) {
+      let (ncr, xs) = switch (history^) {
       | [cr, pr, ...xs] => (pr, xs)
-      | _ => raise exception NoHistory("Can't pop with no previous history")
+      | _ => raise(NoHistory("Can't pop with no previous history"))
       };
-      history := [cr, ...xs];
-      subscriptions^ |> List.iter(sub => sub(cr));
+      history := [ncr, ...xs];
+      subscriptions^ |> List.iter(apply1(ncr));
     }
 
 
@@ -48,86 +49,72 @@ module Make = (RouterConfig: RouterConfig) => {
     };
   };
 
-  type action =
-    | Route(RouterConfig.route);
-
-  type state = {currentRoute: RouterConfig.route};
-
-  let reducer = (action, _) => {
-    switch (action) {
-    | Route(route) => {currentRoute: route}
-    };
-  };
 
   let useRoute = () => {
-    let%hook (state, dispatch) =
-      Hooks.reducer(~initialState={currentRoute: Store.route^}, reducer);
+    let%hook (route, setState) = Hooks.state(Store.getRoute());
 
     let%hook _ =
       Hooks.effect(
         OnMount,
         () => {
           let unsubscribe =
-            Store.subscribe((_, newRoute) => {dispatch(Route(newRoute))});
+            Store.subscribe((newRoute) => {setState(_ => newRoute)});
           Some(unsubscribe);
         },
       );
-
-    (state.currentRoute, Store.updateRoute);
-  };
-
-  let%component make = (~render, ~style=?, ()) => {
-    let%hook (state, dispatch) =
-      Hooks.reducer(~initialState={currentRoute: Store.route^}, reducer);
-
-    let%hook () =
-      Hooks.effect(
-        OnMount,
-        () => {
-          let _ = Store.updateRoute(RouterConfig.defaultRoute);
-          Some(
-            Store.subscribe((_, newRoute) => dispatch(Route(newRoute))),
-          );
-        },
-      );
-
-    <View
-      style={
-        switch (style) {
-        | Some(s) => s
-        | None => []
-        }
-      }>
-      {render(state.currentRoute)}
-    </View>;
+    let result: meta = { route, push: Store.push , pop: Store.pop };
+    result;
   };
 
   module RouterLink = {
-    let make = (~children, ~to_, ~onClick=?, ~style=?, ()) => {
+    let make = (~children, ~to_, ~onClick=?, ~style=[], ()) => {
       <Components.Clickable
         onClick={_ => {
-          switch (onClick) {
-          | Some(c) =>
-            if (c()) {
-              let _ = Store.updateRoute(to_);
-              ();
-            }
-          | None =>
-            let _ = Store.updateRoute(to_);
-            ();
-          }
+          let _ = switch (onClick) {
+          | Some(c) => c()
+          | None => ()
+          };
+          Store.push(to_);
         }}
-        style={
-          switch (style) {
-          | Some(s) => s
-          | None => []
-          }
-        }>
+        style
+      >
         children
       </Components.Clickable>;
     };
   };
 
+  module RouterBack = {
+    let%component make = (~render, ~onClick=?, ~style=[], ()) => {
+      let%hook (disabled, setState) = Hooks.state(Store.length() == 0);
+      let%hook _ =
+        Hooks.effect(
+          OnMount,
+          () => {
+            let unsubscribe =
+              Store.subscribe((_) => {
+                setState(_ => Store.length() == 0);
+              });
+            Some(unsubscribe);
+          },
+        );
+      let content = render(disabled);
+      <Components.Clickable
+        onClick={_ => {
+          let _ = switch (onClick) {
+          | Some(c) => c()
+          | None => ()
+          };
+          Store.pop();
+        }}
+        style
+      >
+        content
+      </Components.Clickable>;
+    };
+  };
+
   let subscribe = Store.subscribe;
-  let redirect = Store.updateRoute;
+  let push = Store.push;
+  let pop = Store.pop;
+  let getRoute = Store.getRoute;
 };

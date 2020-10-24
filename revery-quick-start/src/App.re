@@ -16,7 +16,7 @@ Timber.App.setLevel(Timber.Level.info);
 /* Helpers.run(); */
 
 let%component main = () => {
-  let%hook (route, redirect) = Router.useRoute();
+  let%hook { route }: Router.meta = Router.useRoute();
   /* let%hook (count, setCount) = React.Hooks.state(0); */
 
   /* let increment = () => {
@@ -27,39 +27,14 @@ let%component main = () => {
     color(Color.rgb(0.,0.,0.))
   ];
 
+  let content = switch(route) {
+  | SelectWindow => <SelectWindow />
+  | WindowPreview(id) => <DisplayPreview id=id />
+  };
+
   <View style=style>
-      <Router
-        render={route => switch(route) {
-          | SelectWindow => <SelectWindow />
-          | WindowPreview(id) => <DisplayPreview id=id />
-        }}
-      />
-    /* <Row>
-      <Clickable onClick={_ => {
-        let _ = redirect(SelectBoundingBox);
-      }}>
-        <Text
-          style=Styles.text
-          text="Click me"
-        />
-      </Clickable>
-    </Row> */
+    content
   </View>
-  /* <Center>
-    <Padding padding=24>
-      <Row>
-        <AnimatedText delay={Time.ms(0)} text="Welcome" />
-        <AnimatedText delay={Time.ms(500)} text="to" />
-        <AnimatedText delay={Time.ms(1000)} text="Revery" />
-      </Row>
-    </Padding>
-    <SimpleButton text="Increment" onClick=increment />
-    <Text
-      fontSize=16.
-      style=Styles.text
-      text={"Times clicked: " ++ string_of_int(count)}
-    />
-  </Center>; */
 };
 
 let init = app => {
