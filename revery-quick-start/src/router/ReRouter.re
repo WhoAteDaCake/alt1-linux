@@ -1,7 +1,7 @@
 open Revery;
 open UI;
 
-module RouterLog = (val Log.withNamespace("Router"))
+module Log = (val Log.withNamespace("Router"))
 
 module type RouterConfig = {
   type route;
@@ -29,7 +29,7 @@ module Make = (RouterConfig: RouterConfig) => {
     let push = (route) => {
       history := [route, ...history^];
       currentRoute := route;
-      RouterLog.infof(m => m("Pushed new route: [%s]", toString(route)));
+      Log.infof(m => m("Pushed new route: [%s]", toString(route)));
       List.iter(f => f(route), subscriptions^);
     };
 
@@ -40,7 +40,7 @@ module Make = (RouterConfig: RouterConfig) => {
       | _ => raise(NoHistory("Can't pop with no previous history"))
       };
       
-      RouterLog.infof(m => m("Returning from [%s] to [%s]", toString(cr), toString(ncr)));
+      Log.infof(m => m("Returning from [%s] to [%s]", toString(cr), toString(ncr)));
       history := [ncr, ...xs];
       currentRoute := ncr;
       List.iter(f => f(ncr), subscriptions^);
@@ -91,7 +91,7 @@ module Make = (RouterConfig: RouterConfig) => {
             Store.subscribe((newRoute) => {
               let pRoute = (stateVal^).route;
               if (newRoute != pRoute) {
-                RouterLog.infof(m => m("(%s) Route change [%s] -> [%s]", name, toString(pRoute), toString(newRoute)));
+                Log.infof(m => m("(%s) Route change [%s] -> [%s]", name, toString(pRoute), toString(newRoute)));
                 dispatch(SetRoute(newRoute))
               }
             });
