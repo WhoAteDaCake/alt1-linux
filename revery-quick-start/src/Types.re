@@ -1,1 +1,4 @@
-type size = { width: int, height: int };
+type size = {
+  width: int,
+  height: int,
+};

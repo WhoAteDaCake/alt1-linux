@@ -9,14 +9,15 @@ module Styles = {
 };
 
 let%component main = () => {
-  let%hook { route }: Router.meta = Router.useRoute(~name="App", ());
+  let%hook {route}: Router.meta = Router.useRoute(~name="App", ());
 
-  let content = switch(route) {
-  | SelectWindow => <SelectWindow />
-  | WindowPreview(id) => <DisplayPreview id=id />
-  };
+  let content =
+    switch (route) {
+    | SelectWindow => <SelectWindow />
+    | WindowPreview(id) => <DisplayPreview id />
+    };
 
-  <View> content </View>
+  <View> content </View>;
 };
 
 let init = app => {
@@ -35,12 +36,19 @@ let init = app => {
           ~width=Config.defaultSize.width,
           ~height=Config.defaultSize.height,
           (),
-        )
+        ),
     );
 
-  let _ = Window.onSizeChanged(window, ({width, height}) => GlobalState.update(pState => {
-    {...pState, size: {width, height }}
-  }));
+  let _ =
+    Window.onSizeChanged(window, ({width, height}) =>
+      GlobalState.update(pState => {{
+                                      ...pState,
+                                      size: {
+                                        width,
+                                        height,
+                                      },
+                                    }})
+    );
 
   let _update: Revery.UI.renderFunction = UI.start(window, <main />);
   ();
