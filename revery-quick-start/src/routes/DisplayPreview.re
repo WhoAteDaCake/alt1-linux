@@ -2,12 +2,12 @@ open Revery;
 open Revery.UI;
 open Revery.UI.Components;
 
+module Log = (val Log.withNamespace("Routes/DisplayPreview"))
+
 type state =
 | Loading
 | Loaded(string)
 | Failed(string)
-
-let fileName = "/home/augustinas/projects/github/alt1-linux/revery-quick-start/test.jpg"
 
 let%component make = (~id: int, ()) => {
   let%hook (state, setState) = Hooks.state(Loading);
@@ -21,13 +21,21 @@ let%component make = (~id: int, ()) => {
   let%hook _ = Hooks.effect(
     OnMount,
     () => {
+      let fileName = Helpers.tmpImage();
+      Log.infof(m => m("Generated file for preview [%s]", fileName));
       let result = Stubs.screenshotWindow(~width=size.width, ~height=height, id, fileName);
       let nState = switch (result) {
       | Ok(fName) => Loaded(fName)
-      | Error(msg) => Failed(msg);
+      | Error(msg) => {
+        Log.errorf(m => m("Failed to get a screenshot: \n %s", msg));
+        Failed(msg)
+      };
       }
       setState(_ => nState);
-      None
+      Some(() => {
+        Log.infof(m => m("Screenshot preview removed [%s]", fileName));
+        Sys.remove(fileName)
+      }); 
     },
   );
 
@@ -41,7 +49,7 @@ let%component make = (~id: int, ()) => {
       </Column>
     </View>
   | Failed(msg) => <Text text=Printf.sprintf("Failed to screenshot: \n %s", msg) />
-  | Loaded(file) =>
+  | Loaded(fileName) =>
     <View style=Style.[`Padding(windowPadding)]>
       <Column>
           <View
