@@ -70,10 +70,18 @@ module Make = (RouterConfig: RouterConfig) => {
   let useRoute = (~name="Anonymous", ()) => {
     let%hook (state, dispatch) =
       Hooks.reducer(
-        ~initialState={ route: clone(Store.currentRoute^) },
+        ~initialState={ route: Store.currentRoute^ },
         reducer,
       );
-    
+    /*
+      There seems to be an issue with the scope of state. If we try to access it directly
+      it will shows the state value to be same as the new route.
+      Relevant link:
+      https://github.com/revery-ui/revery/blob/master/src/UI_Hooks/Tick.re
+
+     */
+    let%hook stateVal = Hooks.ref(state);
+    stateVal := state;
     RouterLog.infof(m => m("(%s) Rendering with state: %s", name, toString(state.route)));
 
     let%hook _ =
@@ -83,10 +91,11 @@ module Make = (RouterConfig: RouterConfig) => {
           /* TODO: bug, state updates before dispatch ? */
           let unsubscribe =
             Store.subscribe((newRoute) => {
-              /* if (newRoute != state.route) { */
-                RouterLog.infof(m => m("(%s) Route change [%s] -> [%s]", name, toString(state.route), toString(newRoute)));
+              let pRoute = (stateVal^).route;
+              if (newRoute != pRoute) {
+                RouterLog.infof(m => m("(%s) Route change [%s] -> [%s]", name, toString(pRoute), toString(newRoute)));
                 dispatch(SetRoute(newRoute))
-              /* } */
+              }
             });
           Some(unsubscribe);
         },
