@@ -82,13 +82,11 @@ module Make = (RouterConfig: RouterConfig) => {
      */
     let%hook stateVal = Hooks.ref(state);
     stateVal := state;
-    RouterLog.infof(m => m("(%s) Rendering with state: %s", name, toString(state.route)));
 
     let%hook _ =
       Hooks.effect(
         OnMount,
         () => {
-          /* TODO: bug, state updates before dispatch ? */
           let unsubscribe =
             Store.subscribe((newRoute) => {
               let pRoute = (stateVal^).route;
