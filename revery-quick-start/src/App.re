@@ -4,7 +4,6 @@ open Revery.UI.Components;
 
 module Styles = {
   open Style;
-
   let text = [marginTop(24), color(Color.hex(Theme.darkBlue))];
 };
 
@@ -40,14 +39,16 @@ let init = app => {
     );
 
   let _ =
-    Window.onSizeChanged(window, ({width, height}) =>
-      GlobalState.update(pState => {{
-                                      ...pState,
-                                      size: {
-                                        width,
-                                        height,
-                                      },
-                                    }})
+    Window.onSizeChanged(window, ({width, height}) => {
+        GlobalState.update(pState => {{
+          ...pState,
+          size: {
+            width,
+            height,
+          },
+        }})
+      },
+      ()
     );
 
   let _update: Revery.UI.renderFunction = UI.start(window, <main />);
