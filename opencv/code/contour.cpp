@@ -11,6 +11,13 @@ int thresh = 100;
 RNG rng(12345);
 void thresh_callback(int, void* );
 
+cv::Mat findText(cv::Mat image) {
+    Mat rgb;
+    // downsample and use it for processing
+    pyrDown(image, rgb);
+    pyrDown(rgb, rgb);
+}
+
 int main( int argc, char** argv )
 {
     CommandLineParser parser( argc, argv, "{@input | HappyFish.jpg | input image}" );
@@ -44,6 +51,8 @@ void thresh_callback(int, void* )
     for( size_t i = 0; i< contours.size(); i++ )
     {
         Scalar color = Scalar( rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256) );
+        // Rect = boundingRect(contours[i]);
+        // drawRec(img, (x, y), (x + w, y + h), 255, 1)
         drawContours( drawing, contours, (int)i, color, 2, LINE_8, hierarchy, 0 );
     }
     imshow( "Contours", drawing );
