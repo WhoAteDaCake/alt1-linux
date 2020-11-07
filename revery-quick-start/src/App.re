@@ -14,6 +14,8 @@ let%component main = () => {
     switch (route) {
     | SelectWindow => <SelectWindow />
     | WindowPreview(id) => <DisplayPreview id />
+    | AppMenu => <AppMenu />
+    | HallTracker => <HallTracker />
     };
 
   <View> content </View>;

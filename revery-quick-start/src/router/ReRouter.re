@@ -7,7 +7,6 @@ module type RouterConfig = {
   type route;
   let defaultRoute: route;
   let toString: route => string;
-  let clone: route => route;
 };
 
 exception NoHistory(string);
@@ -102,6 +101,10 @@ module Make = (RouterConfig: RouterConfig) => {
     result;
   };
 
+  /*
+    TODO:
+    * Clickable text based link
+  */
   module Link = {
     let make = (~children, ~to_, ~onClick=?, ~style=[], ()) => {
       <Components.Clickable

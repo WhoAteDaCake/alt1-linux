@@ -2,22 +2,22 @@ open ReRouter;
 
 module RouterConfig  = {
 	/* Define your routes */
-	type route =
+  type route =
   | SelectWindow
-	| WindowPreview(int)
+  | WindowPreview(int)
+  | AppMenu
+	| HallTracker;
 
-	/* Set de the default one */
-	let defaultRoute = SelectWindow;
 
-	let toString = route => switch (route) {
-	| SelectWindow => "SelectWindow"
-	| WindowPreview(id) => Printf.sprintf("WindowPreview(%d)", id)
-	};
+  /* Set de the default one */
+  let defaultRoute = SelectWindow;
 
-	let clone = route => switch (route) {
-  | SelectWindow => SelectWindow
-	| WindowPreview(id) => WindowPreview(id)
-	};
+  let toString = route => switch (route) {
+  | SelectWindow => "SelectWindow"
+  | WindowPreview(id) => Printf.sprintf("WindowPreview(%d)", id)
+  | AppMenu => "AppMenu"
+	| HallTracker => "HallTracker"
+  };
 };
 
 include Make(RouterConfig);

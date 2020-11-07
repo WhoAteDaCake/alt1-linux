@@ -7,11 +7,28 @@ module WindowRow = {
 
   let make = (~name: string, ~id: int, ()) => {
     let text = Printf.sprintf("%s (%d)", name, id);
+    let inactiveStyle=Styles.withTextDefault(Styles.[`PaddingRight(10)]);
+    /*
+      TODO:
+      * Make text clickable
+      * Set windowID to global state
+      * Navigate to the selection window
+    */
     <Row>
-      <Text
-        style=Styles.withTextDefault(Styles.[`PaddingRight(10)])
-        fontSize=Styles.fontSmall
-        text=text
+      <Components.ClickableText
+          inactiveStyle
+          activeStyle=Style.merge(
+            ~source=inactiveStyle,
+            ~target=Styles.[Style.color(Colors.blue)]
+          )
+          fontSize=Styles.fontSmall
+          text=text
+          onClick={(_) => {
+            GlobalState.update((state) => {
+              { ...state, selectedWindowId: Some(id) }
+            });
+            Router.push(AppMenu);
+          }}
       />
       <Router.Link to_=WindowPreview(id)>
         <Text
