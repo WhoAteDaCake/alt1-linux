@@ -41,7 +41,7 @@ static void on_high_V_thresh_trackbar(int, void *)
 }
 
 
-std::string filename = "/home/augustinas/projects/github/alt1-linux/opencv/tmp/xp_drop.jpg";
+std::string filename = "/home/augustinas/projects/github/alt1-linux/opencv/tmp/test.jpg";
 int main(int argc, char* argv[])
 {
     // namedWindow(window_capture_name);
