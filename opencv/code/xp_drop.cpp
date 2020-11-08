@@ -116,7 +116,7 @@ int main(int argc, char** argv)
     p.y = d1.y;
     p.z = 0;
     points.push_back(p);
-    // output.at<Vec3b>(d1.x, d1.y) = Vec3b(255, 255, 255);
+    output.at<Vec3b>(d1.x, d1.y) = Vec3b(255, 255, 255);
 
     if (d1.distance > 25.0) {
       // Vec3b c2 = cropped.at<cv::Vec3b>(d1.x,d1.y);
@@ -129,18 +129,51 @@ int main(int argc, char** argv)
   ds.run();
 
   map<int, Vec3b> colors; 
+  map<int, vector<Point>> point_map;
   for (int i = 0; i < ds.getTotalPointSize(); i += 1) {
     dbscan::Point p = ds.m_points[i];
-    Vec3b color;
-    auto search = colors.find(p.clusterID);
-    if (search != colors.end()) {
-      color = search->second;
+    
+    // Vec3b color;
+    auto search = point_map.find(p.clusterID);
+    if (search != point_map.end()) {
+      search->second.push_back(Point(p.x, p.y));
+      // color = search->second;
     } else {
-      color = Vec3b(rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256));
-      colors.insert({p.clusterID, color});
+      vector<Point> points;
+      points.push_back(Point(p.x, p.y));
+      point_map[p.clusterID] = points;
+      // color = Vec3b(rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256));
+      // colors.insert({p.clusterID, color});
     }
-    output.at<Vec3b>(p.x, p.y) = color;
-  }  
+   
+    // output.at<Vec3b>(p.x, p.y) = color;
+  }
+
+  
+  for (auto it = point_map.begin(); it != point_map.end(); ++it) {
+    Vec3b color = Vec3b(rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256));
+    Point lc(-1, -1);
+    Point br(-1, -1);
+    int i = 0;
+    for (Point p: it->second) {
+      i += 1;
+      if (lc.x == -1 || lc.x > p.x) {
+        lc.x = p.x;
+      }
+      if (lc.y == -1 || lc.y > p.y) {
+        lc.y = p.y;
+      }
+      if (br.x == -1 || br.x < p.x) {
+        br.x = p.x;
+      }
+      if (br.y == -1 || br.y < p.y) {
+        br.y = p.y;
+      }
+    }
+    printf("Corners(%d) [%d, %d] [%d, %d]\n", i, lc.x, lc.y, br.x, br.y);
+    rectangle(output, lc, br, color);
+    // drawRec(img, (p.x, y), (x + w, y + h), 255, 1)
+  }
   // imwrite("output.jpg", output);
   // Mat result = detect_text(output);
 
