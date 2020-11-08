@@ -6,7 +6,9 @@
 #include <math.h>
 #include <vector>
 #include <algorithm> 
+#include <map> 
 
+#include <dbscan.h>
 #include <CIEDE2000.h>
 
 // 200 - width
@@ -20,10 +22,13 @@ using namespace cv;
 using namespace std;
 
 cv::Mat findText(cv::Mat);
+Mat detect_text(Mat large);
 
 std::string filename = "/home/augustinas/projects/github/alt1-linux/opencv/tmp/xp_drop.jpg";
 const char* source_window = "Source image";
 const int box_width = 200;
+RNG rng(12345);
+
 
 struct Similarty {
   float distance;
@@ -101,65 +106,43 @@ int main(int argc, char** argv)
 
   std::sort(distances.begin(), distances.end(), similarity_sort);
   cv::Mat output(cropped.rows, cropped.cols, CV_8UC3, cv::Scalar(0, 0, 0));
+  vector<dbscan::Point> points;
 
   for (int i = 0; i < distances.size(); i += 1) {
     Similarty d1 = distances[i];
-    output.at<Vec3b>(d1.x, d1.y) = Vec3b(255, 255, 255);
+    dbscan::Point p;
+    p.clusterID = UNCLASSIFIED;
+    p.x = d1.x;
+    p.y = d1.y;
+    p.z = 0;
+    points.push_back(p);
+    // output.at<Vec3b>(d1.x, d1.y) = Vec3b(255, 255, 255);
+
     if (d1.distance > 25.0) {
-      Vec3b c2 = cropped.at<cv::Vec3b>(d1.x,d1.y);
-      printf("Color: (%d, %d, %d) distance: %f\n", c2[2], c2[1], c2[0], d1.distance);
+      // Vec3b c2 = cropped.at<cv::Vec3b>(d1.x,d1.y);
+      // printf("Color: (%d, %d, %d) distance: %f\n", c2[2], c2[1], c2[0], d1.distance);
       break;
     }
   }
+  // Cluser points
+  dbscan::DBSCAN ds(50, box_width, points);
+  ds.run();
 
-
-  // Similarty tmp = distances[id];
-  // Vec3b c2 = cropped.at<cv::Vec3b>(tmp.x,tmp.y);
-  // printf("Color: (%d, %d, %d) distance: %f\n", c2[2], c2[1], c2[0], tmp.distance);
-
-
-  // tmp = distances[id + 1];
-  // c2 = cropped.at<cv::Vec3b>(tmp.x,tmp.y);
-  // printf("Color: (%d, %d, %d) distance: %f\n", c2[2], c2[1], c2[0], tmp.distance);
-
-  // Vec3b c2 = cropped.at<cv::Vec3b>(c_x,c_y);
-  // printf("Color: (%d, %d, %d) distance: %f\n", c2[2], c2[1], c2[0], c_dist);
-  // printf("Color: (%d, %d, %d) distance: %f\n", final_res[0], final_res[1], final_res[2], c_dist);
-
-  // int range = 30;
-  // Scalar min_l(11, 22, 134);
-  // Scalar max_l(41, 170, 210);
-  // Scalar min_l(34 - range, (28 - range) / 255, (57 - range) / 255);
-  // Scalar min_h(34 + range, (28 + range ) / 255, (57 + range) / 255);
-  // Detect the object based on HSV Range Values
-  // inRange(
-  //   frame_HSV,
-  //   min_l,
-  //   max_l,
-  //   frame_threshold
-  // );
-
-  // int thresh = 100;
-  // RNG rng(12345);
-  // Canny(frame_threshold, im, thresh, thresh * 2);
-
-  // vector<vector<Point>> contours;
-  // vector<Vec4i> hierarchy;
-  // findContours(frame_threshold, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE );
-  // for( size_t i = 0; i< contours.size(); i++ )
-  // {
-  //   Scalar color = Scalar( rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256) );
-  //   drawContours( frame_threshold, contours, (int)i, color, 2, LINE_8, hierarchy, 0 );
-  // }
-  // im = frame_threshold;
-  // tesseract::TessBaseAPI *ocr = new tesseract::TessBaseAPI();
-  // ocr->Init(NULL, "eng", tesseract::OEM_LSTM_ONLY);
-  // ocr->SetPageSegMode(tesseract::PSM_AUTO);
-  // ocr->SetImage(im.data, im.cols, im.rows, 3, im.step);
-  // std::string outText = std::string(ocr->GetUTF8Text());
-  // ocr->End();
-  
-  // std::cout << outText << "\n";
+  map<int, Vec3b> colors; 
+  for (int i = 0; i < ds.getTotalPointSize(); i += 1) {
+    dbscan::Point p = ds.m_points[i];
+    Vec3b color;
+    auto search = colors.find(p.clusterID);
+    if (search != colors.end()) {
+      color = search->second;
+    } else {
+      color = Vec3b(rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256));
+      colors.insert({p.clusterID, color});
+    }
+    output.at<Vec3b>(p.x, p.y) = color;
+  }  
+  // imwrite("output.jpg", output);
+  // Mat result = detect_text(output);
 
   cv::namedWindow( source_window );
   cv::imshow( source_window, output);
