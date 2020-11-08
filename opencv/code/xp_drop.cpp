@@ -4,6 +4,8 @@
 #include <string>
 #include <tesseract/baseapi.h>
 #include <math.h>
+#include <vector>
+#include <algorithm> 
 
 #include <CIEDE2000.h>
 
@@ -23,6 +25,17 @@ std::string filename = "/home/augustinas/projects/github/alt1-linux/opencv/tmp/x
 const char* source_window = "Source image";
 const int box_width = 200;
 
+struct Similarty {
+  float distance;
+  int x;
+  int y;
+};
+
+bool similarity_sort(Similarty i, Similarty j) {
+  bool result = i.distance < j.distance;
+  return result;
+}
+
 // Returns a Vec3f with converted LAB color scheme
 Vec3f RBG2LAB(float r, float g, float b) {
   Mat output;
@@ -37,7 +50,6 @@ int main(int argc, char** argv)
   cv::Mat src, im;
   // by default color will be bgr
   src = cv::imread(filename);
-  
 
   int height = src.rows;
   int width = src.cols;
@@ -71,22 +83,47 @@ int main(int argc, char** argv)
   Vec3f c1 = RBG2LAB(199,158,80);
   CIEDE2000::LAB lab1 = { c1[0], c1[1], c1[2]};
   CIEDE2000::LAB lab2;
-  int c_x, c_y;
+  // int c_x, c_y;
+  vector<Similarty> distances;
 
   for (int x = 0; x < mask.rows; x += 1) {
     for (int y = 0; y < mask.cols; y += 1) {
       Vec3f c2 = mask.at<cv::Vec3f>(x,y);
       lab2 = { c2[0], c2[1], c2[2] };
       float dist = CIEDE2000::CIEDE2000(lab1, lab2);
-      if (c_dist == -1 || dist < c_dist) {
-        c_dist = dist;
-        c_x = x;
-        c_y = y;
-      }
+      Similarty tmp;
+      tmp.distance = dist;
+      tmp.x = x;
+      tmp.y = y;
+      distances.push_back(tmp);
     }
   }
-  Vec3b c2 = cropped.at<cv::Vec3b>(c_x,c_y);
-  printf("Color: (%d, %d, %d) distance: %f\n", c2[2], c2[1], c2[0], c_dist);
+
+  std::sort(distances.begin(), distances.end(), similarity_sort);
+  cv::Mat output(cropped.rows, cropped.cols, CV_8UC3, cv::Scalar(0, 0, 0));
+
+  for (int i = 0; i < distances.size(); i += 1) {
+    Similarty d1 = distances[i];
+    output.at<Vec3b>(d1.x, d1.y) = Vec3b(255, 255, 255);
+    if (d1.distance > 25.0) {
+      Vec3b c2 = cropped.at<cv::Vec3b>(d1.x,d1.y);
+      printf("Color: (%d, %d, %d) distance: %f\n", c2[2], c2[1], c2[0], d1.distance);
+      break;
+    }
+  }
+
+
+  // Similarty tmp = distances[id];
+  // Vec3b c2 = cropped.at<cv::Vec3b>(tmp.x,tmp.y);
+  // printf("Color: (%d, %d, %d) distance: %f\n", c2[2], c2[1], c2[0], tmp.distance);
+
+
+  // tmp = distances[id + 1];
+  // c2 = cropped.at<cv::Vec3b>(tmp.x,tmp.y);
+  // printf("Color: (%d, %d, %d) distance: %f\n", c2[2], c2[1], c2[0], tmp.distance);
+
+  // Vec3b c2 = cropped.at<cv::Vec3b>(c_x,c_y);
+  // printf("Color: (%d, %d, %d) distance: %f\n", c2[2], c2[1], c2[0], c_dist);
   // printf("Color: (%d, %d, %d) distance: %f\n", final_res[0], final_res[1], final_res[2], c_dist);
 
   // int range = 30;
@@ -124,10 +161,10 @@ int main(int argc, char** argv)
   
   // std::cout << outText << "\n";
 
-  // cv::namedWindow( source_window );
-  // cv::imshow( source_window, im);
+  cv::namedWindow( source_window );
+  cv::imshow( source_window, output);
 
-  // cv::waitKey();
+  cv::waitKey();
 
   return 0;
 }
