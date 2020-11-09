@@ -1,0 +1,26 @@
+{
+  "tasks": [
+    {
+      "type": "cppbuild",
+      "label": "C/C++: clang++ build active file",
+      "command": "/home/augustinas/projects/github/alt1-linux/opencv/run.bash",
+      "args": [
+        "${file}",
+        "${fileDirname}/opencv/exec/${fileBasenameNoExtension}",
+        "${workspaceFolder}",
+      ],
+      "options": {
+        "cwd": "/usr/bin"
+      },
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "detail": "Generated task by Debugger"
+    }
+  ],
+  "version": "2.0.0"
+}

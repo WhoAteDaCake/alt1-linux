@@ -128,15 +128,8 @@ cv::Mat remove_isolated_pixels(cv::Mat &image) {
           if (value == 255) {
             ls.push_back(cv::Point(x + x1, y + y1));
           }
-          // TMP
-          // dst.at<uchar>(x + x1, y + y1) = 1;
         }
       }
-      // TMP
-      // cv::imshow( source_window, dst);
-      // cv::waitKey(1);
-      // std::this_thread::sleep_for(std::chrono::milliseconds(3000));
-
       total_white += ls.size();
       // Validate that enough neighbours exist
       if (ls.size() < min_n) {
@@ -148,37 +141,6 @@ cv::Mat remove_isolated_pixels(cv::Mat &image) {
   }
   printf("Total white: %d\n", total_white);
   return dst;
-  // int erosion_size = 1;
-  // int s = erosion_size * 2 + 1;
-
-  // // cv::Mat kernel1 = cv::getStructuringElement(
-  // //   cv::MORPH_RECT,
-  // //   cv::Size(s, s),
-  // //   cv::Point(erosion_size,erosion_size)
-  // // );
-
-  // cv::Mat kernel1 = (cv::Mat_<uchar>(3, 3) <<
-  //       0, 0, 0,
-  //       0, 1, 0,
-  //       0, 0, 0);
-  // cv::Mat kernel2 = (cv::Mat_<uchar>(3, 3) <<
-  //       1, 1, 1,
-  //       1, 0, 1,
-  //       1, 1, 1);
-  // cv::Mat image_eroded, reversed_eroded, difference, difference_inverted, reversed, output;
-
-  // // Invert image colors
-  // cv::bitwise_not(image, reversed);
-
-  // cv::morphologyEx(image, image_eroded, cv::MORPH_ERODE, kernel1, cv::Point(-1,-1), 1);
-  // cv::morphologyEx(reversed, reversed_eroded, cv::MORPH_ERODE, kernel2, cv::Point(-1,-1), 1);
-  // cv::bitwise_and(image_eroded, reversed_eroded, difference);
-
-  // // // Create the mask
-  // cv::bitwise_not(difference, difference_inverted);
-  // cv::bitwise_and(image, difference_inverted, output);
-
-  // return output;
 }
 
 int main() {
@@ -202,15 +164,13 @@ int main() {
   i = 0;
   cv::namedWindow( source_window );
 
+  cv::imshow( source_window, result);
+  cv::waitKey(1);
+
   while (true) {
-    printf("Iteration %d\n", i);
+    printf("Iteration %d ", i);
     cv::Mat tmp = remove_isolated_pixels(result);
     result = tmp.clone();
-    // cv::Mat tmp, final_result;
-
-    // cv::hconcat(output, result, tmp);
-    // cv::resize(tmp, final_result, cv::Size(), 2, 2);
-
 
     cv::imshow( source_window, tmp);
     cv::waitKey(0);
