@@ -142,6 +142,49 @@ cv::Mat remove_isolated_pixels(cv::Mat &image, cv::Size box, int min_n) {
   return dst;
 }
 
+/**
+ * Clusters pixels by their coordinates 
+ * @param image - CV_8U matrix containing, containing only black/white pixels
+ * @param min_n - Minimum number of neighbours for clustering algorithm
+ * @param epsilon - Cluster range (should be estimated text width)
+ * @return Map containing a list of coordinates in each cluster
+ */
+std::map<int, std::vector<cv::Point>> cluster_pixels(cv::Mat &image, int min_n, float epsilon) {
+  std::vector<dbscan::Point> points;
+
+  for (int x = 0; x < image.rows; x += 1) {
+    for (int y = 0; y < image.cols; y += 1) {
+      int value = (uchar)image.at<uchar>(x, y);
+      if (value == 255) {
+          dbscan::Point p;
+          p.clusterID = UNCLASSIFIED;
+          p.x = x;
+          p.y = y;
+          p.z = 0;
+          points.push_back(p);
+      }
+    }
+  }
+
+  dbscan::DBSCAN ds(10, epsilon, points);
+  ds.run();
+
+  std::map<int, std::vector<cv::Point>> point_map;
+  for (int i = 0; i < ds.getTotalPointSize(); i += 1) {
+    dbscan::Point p = ds.m_points[i];
+    cv::Point coord = cv::Point(p.x, p.y);
+
+    auto search = point_map.find(p.clusterID);
+    if (search != point_map.end()) {
+      search->second.push_back(coord);
+    } else {
+      std::vector<cv::Point> points = {coord};
+      point_map[p.clusterID] = points;
+    }
+  }
+  return point_map;
+}
+
 int main() {
   float similarity_cut_off = 25.0;
 
@@ -161,12 +204,23 @@ int main() {
 
   // Text will flow horizontally, meaning if we are scanning, it's
   // best to try with a rectange
-  cv::Mat tmp = remove_isolated_pixels(output, cv::Size(8, 4), 4);
+  cv::Mat cleaned = remove_isolated_pixels(output, cv::Size(8, 4), 4);
 
+  // Run clustering algorithm to isolate groups
+  auto clusters = cluster_pixels(cleaned, 10, box_width);
+  cv::Mat cluster_view(cropped.rows, cropped.cols, CV_8UC3, cv::Vec3b(0, 0, 0));
   
+  for (auto it = clusters.begin(); it != clusters.end(); ++it) {
+    cv::Vec3b color = cv::Vec3b(rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256));
+    for (cv::Point p: it->second) {
+      cluster_view.at<cv::Vec3b>(p.x, p.y) = color;
+    }
+    cv::imshow(source_window, cluster_view);
+    cv::waitKey(0);
+  }
 
-  cv::imshow( source_window, tmp);
-  cv::waitKey(0);
+  // cv::imshow(source_window, cluster_view);
+  // cv::waitKey(0);
 
   return 0;
 }
