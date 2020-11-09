@@ -26,6 +26,27 @@ const char* source_window = "Source image";
 int box_width = 200;
 cv::RNG rng(12345);
 
+void CallBackFunc(int event, int x, int y, int flags, void* userdata)
+{
+     if  ( event == cv::EVENT_LBUTTONDOWN )
+     {
+          std::cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" << std::endl;
+     }
+    //  else if  ( event == cv::EVENT_RBUTTONDOWN )
+    //  {
+    //       std::cout << "Right button of the mouse is clicked - position (" << x << ", " << y << ")" << std::endl;
+    //  }
+    //  else if  ( event == cv::EVENT_MBUTTONDOWN )
+    //  {
+    //       std::cout << "Middle button of the mouse is clicked - position (" << x << ", " << y << ")" << std::endl;
+    //  }
+    //  else if ( event == cv::EVENT_MOUSEMOVE )
+    //  {
+    //       std::cout << "Mouse move over the window - position (" << x << ", " << y << ")" << std::endl;
+
+    //  }
+}
+
 struct Similarty {
   float distance;
   int x;
@@ -116,7 +137,7 @@ std::vector<Similarty> find_similar(cv::Vec3f &col, cv::Mat& image) {
 cv::Mat remove_isolated_pixels(cv::Mat &image, cv::Size box, int min_n) {
   cv::Mat dst = image.clone();
 
-  std::vector<cv::Point> ls;
+  std::vector<cv::Point2i> ls;
 
   for (int x = 0; x < (dst.rows - box.height); x += box.height) {
     for (int y = 0; y < (dst.cols - box.width); y += box.width) {
@@ -127,13 +148,13 @@ cv::Mat remove_isolated_pixels(cv::Mat &image, cv::Size box, int min_n) {
         for (int y1 = 0; y1 < box.width && y + y1 < dst.cols; y1 += 1) {
           int value = (uchar)dst.at<uchar>(x + x1, y + y1);
           if (value == 255) {
-            ls.push_back(cv::Point(x + x1, y + y1));
+            ls.push_back(cv::Point2i(x + x1, y + y1));
           }
         }
       }
       // Validate that enough neighbours exist
       if (ls.size() != 0 && ls.size() < min_n) {
-        for (cv::Point p: ls) {
+        for (cv::Point2i p: ls) {
           dst.at<uchar>(p.x, p.y) = 1;
         }
       }
@@ -149,7 +170,7 @@ cv::Mat remove_isolated_pixels(cv::Mat &image, cv::Size box, int min_n) {
  * @param epsilon - Cluster range (should be estimated text width)
  * @return Map containing a list of coordinates in each cluster
  */
-std::map<int, std::vector<cv::Point>> cluster_pixels(cv::Mat &image, int min_n, float epsilon) {
+std::map<int, std::vector<cv::Point2i>> cluster_pixels(cv::Mat &image, int min_n, float epsilon) {
   std::vector<dbscan::Point> points;
 
   for (int x = 0; x < image.rows; x += 1) {
@@ -169,16 +190,19 @@ std::map<int, std::vector<cv::Point>> cluster_pixels(cv::Mat &image, int min_n, 
   dbscan::DBSCAN ds(10, epsilon, points);
   ds.run();
 
-  std::map<int, std::vector<cv::Point>> point_map;
+  std::map<int, std::vector<cv::Point2i>> point_map;
   for (int i = 0; i < ds.getTotalPointSize(); i += 1) {
     dbscan::Point p = ds.m_points[i];
-    cv::Point coord = cv::Point(p.x, p.y);
+    if (p.clusterID == UNCLASSIFIED) {
+      continue;
+    }
+    cv::Point2i coord = cv::Point2i(p.x, p.y);
 
     auto search = point_map.find(p.clusterID);
     if (search != point_map.end()) {
       search->second.push_back(coord);
     } else {
-      std::vector<cv::Point> points = {coord};
+      std::vector<cv::Point2i> points = {coord};
       point_map[p.clusterID] = points;
     }
   }
@@ -210,15 +234,36 @@ int main() {
   auto clusters = cluster_pixels(cleaned, 10, box_width);
   cv::Mat cluster_view(cropped.rows, cropped.cols, CV_8UC3, cv::Vec3b(0, 0, 0));
   
-  for (auto it = clusters.begin(); it != clusters.end(); ++it) {
+  for (auto &it: clusters) {
     cv::Vec3b color = cv::Vec3b(rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256));
-    for (cv::Point p: it->second) {
-      cluster_view.at<cv::Vec3b>(p.x, p.y) = color;
+    cv::Point2i lc(0, 0);
+    cv::Point2i br(0, 0);
+    for (cv::Point2i unfixed: it.second) {
+      // TODO, fix this in previous code
+      cv::Point2i p(unfixed.y, unfixed.x);
+      if (lc.x == 0 || lc.x > p.x) {
+        lc.x = p.x;
+      }
+      if (lc.y == 0 || lc.y > p.y) {
+        lc.y = p.y;
+      }
+      if (br.x == 0 || br.x < p.x) {
+        br.x = p.x;
+      }
+      if (br.y == 0 || br.y < p.y) {
+        br.y = p.y;
+      }
+      cluster_view.at<cv::Vec3b>(unfixed.x, unfixed.y) = color;
     }
-    cv::imshow(source_window, cluster_view);
-    cv::waitKey(0);
+    printf("Corners(%d) [%d, %d] [%d, %d]\n", it.first, lc.x, lc.y, br.x, br.y);
+    cv::rectangle(cluster_view, lc, br, color);
+    // cv::imshow(source_window, cluster_view);
+    // cv::waitKey(1);
   }
-
+  cv::namedWindow(source_window);
+  cv::setMouseCallback(source_window, CallBackFunc, 0);
+  cv::imshow(source_window, cluster_view);
+  cv::waitKey(0);
   // cv::imshow(source_window, cluster_view);
   // cv::waitKey(0);
 

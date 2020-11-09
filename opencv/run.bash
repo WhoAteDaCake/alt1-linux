@@ -5,7 +5,7 @@ FLAGS="$(pkg-config --cflags --libs opencv4 tesseract x11) "
 # echo "Output: $2"
 # echo "Directory $3"
 
-g++ -g -O3 -std=c++17 \
+g++ -g -std=c++17 \
   $1 \
   $3/opencv/code/include/CIEDE2000.cpp \
   $3/opencv/code/include/dbscan.cpp \
