@@ -2,8 +2,8 @@
   "tasks": [
     {
       "type": "cppbuild",
-      "label": "C/C++: clang++ build active file",
-      "command": "/home/augustinas/projects/github/alt1-linux/opencv/run.bash",
+      "label": "bash_build",
+      "command": "${workspaceFolder}/opencv/run.bash",
       "args": [
         "${file}",
         "${fileDirname}/opencv/exec/${fileBasenameNoExtension}",

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 FLAGS="$(pkg-config --cflags --libs opencv4 tesseract x11) "
 
-# echo "File: $1"
-# echo "Output: $2"
-# echo "Directory $3"
+echo "File: $1"
+echo "Output: $2"
+echo "Directory $3"
 
 g++ -g -O3 -std=c++17 \
   $1 \

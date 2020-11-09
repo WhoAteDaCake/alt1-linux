@@ -5,16 +5,16 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "clang++ - Build and debug active file",
+      "name": "g++ build and debug active file",
       "type": "cppdbg",
       "request": "launch",
-      "program": "${fileDirname}/opencv/exec/${fileBasenameNoExtension}",
+      "program": "${workspaceFolder}/opencv/exec/${fileBasenameNoExtension}",
       "args": [],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],
       "externalConsole": false,
-      "MIMode": "lldb",
+      "MIMode": "gdb",
       "setupCommands": [
         {
           "description": "Enable pretty-printing for gdb",
@@ -22,8 +22,8 @@
           "ignoreFailures": true
         }
       ],
-      "preLaunchTask": "C/C++: clang++ build active file",
-      "miDebuggerPath": "/usr/bin/lldb-mi"
+      "preLaunchTask": "bash_build",
+      "miDebuggerPath": "/usr/bin/gdb"
     }
   ]
 }
