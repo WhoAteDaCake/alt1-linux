@@ -203,7 +203,7 @@ int main(int argc, char** argv)
   cv::resize(output, tmp, cv::Size(), 2, 2);
   cv::namedWindow( source_window );
   cv::imshow( source_window, tmp);
-
+  
   cv::waitKey();
 
   return 0;
