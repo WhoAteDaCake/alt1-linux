@@ -125,7 +125,7 @@ int main(int argc, char** argv)
     }
   }
   // Cluser points
-  dbscan::DBSCAN ds(50, box_width, points);
+  dbscan::DBSCAN ds(10, box_width, points);
   ds.run();
 
   map<int, Vec3b> colors; 
@@ -149,6 +149,7 @@ int main(int argc, char** argv)
     // output.at<Vec3b>(p.x, p.y) = color;
   }
 
+  cv::namedWindow( source_window );
   
   for (auto it = point_map.begin(); it != point_map.end(); ++it) {
     Vec3b color = Vec3b(rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256));
@@ -157,28 +158,51 @@ int main(int argc, char** argv)
     int i = 0;
     for (Point p: it->second) {
       i += 1;
-      if (lc.x == -1 || lc.x > p.x) {
-        lc.x = p.x;
+      if (lc.x == -1 || lc.x > p.x && lc.y > p.y) {
+        lc = Point(p.x, p.y);
       }
-      if (lc.y == -1 || lc.y > p.y) {
-        lc.y = p.y;
+      if (br.x == -1 || br.x < p.x && br.y < p.x) {
+        br = Point(p.x, p.y);
       }
-      if (br.x == -1 || br.x < p.x) {
-        br.x = p.x;
-      }
-      if (br.y == -1 || br.y < p.y) {
-        br.y = p.y;
-      }
+      // if (lc.x == -1 || lc.x > p.x) {
+      //   lc.x = p.x;
+      // }
+      // if (lc.y == -1 || lc.y > p.y) {
+      //   lc.y = p.y;
+      // }
+      // if (br.x == -1 || br.x < p.x) {
+      //   br.x = p.x;
+      // }
+      // if (br.y == -1 || br.y < p.y) {
+      //   br.y = p.y;
+      // }
+      output.at<Vec3b>(p.x, p.y) = color;
     }
     printf("Corners(%d) [%d, %d] [%d, %d]\n", i, lc.x, lc.y, br.x, br.y);
-    rectangle(output, lc, br, color);
+    circle(output,
+      lc,
+      2,
+      color,
+      FILLED,
+      LINE_8 );
+    circle(output,
+      br,
+      2,
+      color,
+      FILLED,
+      LINE_8 );
+    // cv::rectangle(output, lc, br, color);
+    
+    // cv::imshow( source_window, output);
+    // cv::waitKey();
     // drawRec(img, (p.x, y), (x + w, y + h), 255, 1)
   }
   // imwrite("output.jpg", output);
   // Mat result = detect_text(output);
-
+  Mat tmp;
+  cv::resize(output, tmp, cv::Size(), 2, 2);
   cv::namedWindow( source_window );
-  cv::imshow( source_window, output);
+  cv::imshow( source_window, tmp);
 
   cv::waitKey();
 
