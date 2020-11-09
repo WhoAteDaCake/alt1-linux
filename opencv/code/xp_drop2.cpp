@@ -109,13 +109,14 @@ std::vector<Similarty> find_similar(cv::Vec3f &col, cv::Mat& image) {
   return distances;
 }
 
-cv::Mat remove_isolated_pixels(cv::Mat &image) {
+/** 
+ * - Removes isolated pixels by checking within provided box radius
+ * - If there are less than min_n neighbours, it will remove all pixels within the box
+ */ 
+cv::Mat remove_isolated_pixels(cv::Mat &image, cv::Size box, int min_n) {
   cv::Mat dst = image.clone();
-  cv::Size box(3, 3);
-  int min_n = 9;
 
   std::vector<cv::Point> ls;
-  int total_white = 0;
 
   for (int x = 0; x < (dst.rows - box.height); x += box.height) {
     for (int y = 0; y < (dst.cols - box.width); y += box.width) {
@@ -130,7 +131,6 @@ cv::Mat remove_isolated_pixels(cv::Mat &image) {
           }
         }
       }
-      total_white += ls.size();
       // Validate that enough neighbours exist
       if (ls.size() != 0 && ls.size() < min_n) {
         for (cv::Point p: ls) {
@@ -139,7 +139,6 @@ cv::Mat remove_isolated_pixels(cv::Mat &image) {
       }
     }
   }
-  printf("Total white: %d\n", total_white);
   return dst;
 }
 
@@ -160,22 +159,14 @@ int main() {
     output.at<uchar>(s.x, s.y) = (uchar)255;
   }
 
-  cv::Mat result = output.clone();
-  i = 0;
-  cv::namedWindow( source_window );
+  // Text will flow horizontally, meaning if we are scanning, it's
+  // best to try with a rectange
+  cv::Mat tmp = remove_isolated_pixels(output, cv::Size(8, 4), 4);
 
-  cv::imshow( source_window, result);
-  cv::waitKey(1);
+  
 
-  while (true) {
-    printf("Iteration %d ", i);
-    cv::Mat tmp = remove_isolated_pixels(result);
-    result = tmp.clone();
-
-    cv::imshow( source_window, tmp);
-    cv::waitKey(0);
-    i += 1;
-  }
+  cv::imshow( source_window, tmp);
+  cv::waitKey(0);
 
   return 0;
 }
