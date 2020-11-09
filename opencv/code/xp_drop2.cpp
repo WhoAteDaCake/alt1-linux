@@ -117,14 +117,14 @@ cv::Mat remove_isolated_pixels(cv::Mat &image) {
   std::vector<cv::Point> ls;
   int total_white = 0;
 
-  for (int x = 0; x < dst.rows - box.height; x += box.height) {
-    for (int y = 0; y < dst.cols - box.width; y += box.width) {
+  for (int x = 0; x < (dst.rows - box.height); x += box.height) {
+    for (int y = 0; y < (dst.cols - box.width); y += box.width) {
       // printf("Runing (%d, %d)\n", x, y);
       // Empty vector
       ls.clear();
       for (int x1= 0; x1 < box.height && x + x1 < dst.rows; x1 += 1) {
         for (int y1 = 0; y1 < box.width && y + y1 < dst.cols; y1 += 1) {
-          int value = dst.at<int>(x + x1, y + y1);
+          int value = (uchar)dst.at<uchar>(x + x1, y + y1);
           if (value == 255) {
             ls.push_back(cv::Point(x + x1, y + y1));
           }
@@ -132,7 +132,7 @@ cv::Mat remove_isolated_pixels(cv::Mat &image) {
       }
       total_white += ls.size();
       // Validate that enough neighbours exist
-      if (ls.size() < min_n) {
+      if (ls.size() != 0 && ls.size() < min_n) {
         for (cv::Point p: ls) {
           dst.at<uchar>(p.x, p.y) = 1;
         }
@@ -157,7 +157,7 @@ int main() {
   // Draw points on an empty Mat
   cv::Mat output(cropped.rows, cropped.cols, CV_8U, 1);
   for (Similarty& s: ls) {
-    output.at<uchar>(s.x, s.y) = 255;
+    output.at<uchar>(s.x, s.y) = (uchar)255;
   }
 
   cv::Mat result = output.clone();
