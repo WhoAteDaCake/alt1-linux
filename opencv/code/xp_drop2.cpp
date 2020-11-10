@@ -20,6 +20,7 @@
 #include <dbscan.h>
 #include <CIEDE2000.h>
 
+typedef std::map<int, std::vector<cv::Point2i>> Clusters;
 
 std::string filename = "/home/augustinas/projects/github/alt1-linux/opencv/tmp/xp_drop.jpg";
 const char* source_window = "Source image";
@@ -170,17 +171,20 @@ cv::Mat remove_isolated_pixels(cv::Mat &image, cv::Size box, int min_n) {
  * @param epsilon - Cluster range (should be estimated text width)
  * @return Map containing a list of coordinates in each cluster
  */
-std::map<int, std::vector<cv::Point2i>> cluster_pixels(cv::Mat &image, int min_n, float epsilon) {
+Clusters cluster_pixels(cv::Mat &image, int min_n, float epsilon) {
   std::vector<dbscan::Point> points;
 
   for (int x = 0; x < image.rows; x += 1) {
     for (int y = 0; y < image.cols; y += 1) {
       int value = (uchar)image.at<uchar>(x, y);
       if (value == 255) {
+          // Remember when using point the x and y are inverted,
+          // so src.at(i,j) is using (i,j) as (row,column)
+          // but Point(x,y) is using (x,y) as (column,row)
           dbscan::Point p;
           p.clusterID = UNCLASSIFIED;
-          p.x = x;
-          p.y = y;
+          p.x = y;
+          p.y = x;
           p.z = 0;
           points.push_back(p);
       }
@@ -190,7 +194,7 @@ std::map<int, std::vector<cv::Point2i>> cluster_pixels(cv::Mat &image, int min_n
   dbscan::DBSCAN ds(10, epsilon, points);
   ds.run();
 
-  std::map<int, std::vector<cv::Point2i>> point_map;
+  Clusters point_map;
   for (int i = 0; i < ds.getTotalPointSize(); i += 1) {
     dbscan::Point p = ds.m_points[i];
     if (p.clusterID == UNCLASSIFIED) {
@@ -207,6 +211,37 @@ std::map<int, std::vector<cv::Point2i>> cluster_pixels(cv::Mat &image, int min_n
     }
   }
   return point_map;
+}
+
+Clusters rectangles_only (Clusters& clusters) {
+  Clusters filtered;
+  for (auto &it: clusters) {
+    // cv::Vec3b color = cv::Vec3b(rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256));
+    cv::Point2i lc(0, 0);
+    cv::Point2i br(0, 0);
+
+    for (cv::Point2i p: it.second) {
+      if (lc.x == 0 || lc.x > p.x) {
+        lc.x = p.x;
+      }
+      if (lc.y == 0 || lc.y > p.y) {
+        lc.y = p.y;
+      }
+      if (br.x == 0 || br.x < p.x) {
+        br.x = p.x;
+      }
+      if (br.y == 0 || br.y < p.y) {
+        br.y = p.y;
+      }
+    }
+    double top = abs(br.x - lc.x);
+    double side = abs(lc.y - br.y);
+    // We have a text rectangle 
+    if (top > side * 2) {
+      filtered[it.first] = it.second;
+    }
+  }
+  return filtered;
 }
 
 int main() {
@@ -233,35 +268,14 @@ int main() {
   // Run clustering algorithm to isolate groups
   auto clusters = cluster_pixels(cleaned, 10, box_width);
   cv::Mat cluster_view(cropped.rows, cropped.cols, CV_8UC3, cv::Vec3b(0, 0, 0));
-  
-  for (auto &it: clusters) {
+  auto rectangle_clusters = rectangles_only(clusters);
+  for (auto &it: rectangle_clusters) {
     cv::Vec3b color = cv::Vec3b(rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256));
-    cv::Point2i lc(0, 0);
-    cv::Point2i br(0, 0);
-    for (cv::Point2i unfixed: it.second) {
-      // TODO, fix this in previous code
-      cv::Point2i p(unfixed.y, unfixed.x);
-      if (lc.x == 0 || lc.x > p.x) {
-        lc.x = p.x;
-      }
-      if (lc.y == 0 || lc.y > p.y) {
-        lc.y = p.y;
-      }
-      if (br.x == 0 || br.x < p.x) {
-        br.x = p.x;
-      }
-      if (br.y == 0 || br.y < p.y) {
-        br.y = p.y;
-      }
-      cluster_view.at<cv::Vec3b>(unfixed.x, unfixed.y) = color;
+    for (cv::Point2i p: it.second) {
+      cluster_view.at<cv::Vec3b>(p.y, p.x) = color;
     }
-    printf("Corners(%d) [%d, %d] [%d, %d]\n", it.first, lc.x, lc.y, br.x, br.y);
-    cv::rectangle(cluster_view, lc, br, color);
-    // cv::imshow(source_window, cluster_view);
-    // cv::waitKey(1);
   }
   cv::namedWindow(source_window);
-  cv::setMouseCallback(source_window, CallBackFunc, 0);
   cv::imshow(source_window, cluster_view);
   cv::waitKey(0);
   // cv::imshow(source_window, cluster_view);
