@@ -20,38 +20,26 @@
 #include <dbscan.h>
 #include <CIEDE2000.h>
 
-typedef std::map<int, std::vector<cv::Point2i>> Clusters;
+typedef std::map<int, std::vector<cv::Point>> Clusters;
 
 std::string filename = "/home/augustinas/projects/github/alt1-linux/opencv/tmp/xp_drop.jpg";
 const char* source_window = "Source image";
 int box_width = 200;
 cv::RNG rng(12345);
 
-void CallBackFunc(int event, int x, int y, int flags, void* userdata)
-{
-     if  ( event == cv::EVENT_LBUTTONDOWN )
-     {
-          std::cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" << std::endl;
-     }
-    //  else if  ( event == cv::EVENT_RBUTTONDOWN )
-    //  {
-    //       std::cout << "Right button of the mouse is clicked - position (" << x << ", " << y << ")" << std::endl;
-    //  }
-    //  else if  ( event == cv::EVENT_MBUTTONDOWN )
-    //  {
-    //       std::cout << "Middle button of the mouse is clicked - position (" << x << ", " << y << ")" << std::endl;
-    //  }
-    //  else if ( event == cv::EVENT_MOUSEMOVE )
-    //  {
-    //       std::cout << "Mouse move over the window - position (" << x << ", " << y << ")" << std::endl;
-
-    //  }
-}
-
 struct Similarty {
   float distance;
   int x;
   int y;
+};
+
+struct ClusterMeta {
+  std::vector<cv::Point> points;
+  // Bounding box corners:
+  // Left top corner
+  cv::Point ltc;
+  // Right bottom corner 
+  cv::Point rbc;
 };
 
 bool similarity_sort(Similarty i, Similarty j) {
@@ -213,10 +201,9 @@ Clusters cluster_pixels(cv::Mat &image, int min_n, float epsilon) {
   return point_map;
 }
 
-Clusters rectangles_only (Clusters& clusters) {
-  Clusters filtered;
+std::map<int, ClusterMeta> rectangles_only (Clusters& clusters) {
+  std::map<int, ClusterMeta> filtered;
   for (auto &it: clusters) {
-    // cv::Vec3b color = cv::Vec3b(rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256));
     cv::Point2i lc(0, 0);
     cv::Point2i br(0, 0);
 
@@ -238,7 +225,8 @@ Clusters rectangles_only (Clusters& clusters) {
     double side = abs(lc.y - br.y);
     // We have a text rectangle 
     if (top > side * 2) {
-      filtered[it.first] = it.second;
+      ClusterMeta meta = { it.second, lc, br };
+      filtered[it.first] = meta;
     }
   }
   return filtered;
@@ -270,10 +258,10 @@ int main() {
   cv::Mat cluster_view(cropped.rows, cropped.cols, CV_8UC3, cv::Vec3b(0, 0, 0));
   auto rectangle_clusters = rectangles_only(clusters);
   for (auto &it: rectangle_clusters) {
-    cv::Vec3b color = cv::Vec3b(rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256));
-    for (cv::Point2i p: it.second) {
-      cluster_view.at<cv::Vec3b>(p.y, p.x) = color;
-    }
+    // cv::Vec3b color = cv::Vec3b(rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256));
+    // for (cv::Point2i p: it.second.points) {
+    //   cluster_view.at<cv::Vec3b>(p.y, p.x) = color;
+    // }
   }
   cv::namedWindow(source_window);
   cv::imshow(source_window, cluster_view);
