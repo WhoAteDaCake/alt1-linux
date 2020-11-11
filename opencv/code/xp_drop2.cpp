@@ -49,7 +49,27 @@ struct ClusterMeta {
   int height;
 };
 
-bool similarity_sort(Similarty i, Similarty j) {
+// trim from start (in place)
+static inline void ltrim(std::string &s) {
+  s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
+    return !std::isspace(ch);
+  }));
+}
+
+// trim from end (in place)
+static inline void rtrim(std::string &s) {
+  s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
+    return !std::isspace(ch);
+  }).base(), s.end());
+}
+
+// trim from both ends (in place)
+static inline void trim(std::string &s) {
+  ltrim(s);
+  rtrim(s);
+}
+
+static inline bool similarity_sort(Similarty i, Similarty j) {
   bool result = i.distance < j.distance;
   return result;
 }
@@ -300,7 +320,9 @@ std::map<int, ClusterMeta> rectangles_only (Clusters& clusters) {
     int width = abs(br.x - lc.x);
     int height = abs(lc.y - br.y);
     // We have a text rectangle 
-    if (width > height * 2) {
+    // + higher than font 12
+    // Might change in the future
+    if ((float)width > 1.5 * (float)height && height > 10) {
       ClusterMeta meta = { it.second, lc, br, width, height };
       filtered[it.first] = meta;
     }
@@ -318,6 +340,7 @@ std::vector<std::string> extract_text(std::map<int, ClusterMeta> &clusters, int 
 
   tesseract::TessBaseAPI ocr = tesseract::TessBaseAPI();
   ocr.Init(NULL, "eng", tesseract::OEM_LSTM_ONLY);
+  ocr.SetVariable("user_defined_dpi", "300");
   // ocr->Init(NULL, "eng", tesseract::OEM_LSTM_ONLY);
   ocr.SetPageSegMode(tesseract::PSM_AUTO);
   
@@ -331,7 +354,7 @@ std::vector<std::string> extract_text(std::map<int, ClusterMeta> &clusters, int 
     for (cv::Point2i p: data.points) {
       cluster_view.at<cv::Vec3b>(p.y, p.x) = cv::Vec3b(0, 0, 0);
     }
-    cv::Mat piece = cluster_view(cv::Rect(
+    cv::Mat tmp = cluster_view(cv::Rect(
       // X
       data.ltc.x,
       // Y
@@ -341,15 +364,24 @@ std::vector<std::string> extract_text(std::map<int, ClusterMeta> &clusters, int 
       // Height (Xp drops start in middle of the screen)
       data.height
     ));
+    cv::Mat piece;
+    cv::resize(tmp, piece, cv::Size(), 2, 2);
     // OCR
+    // printf("Width: %d, Height: %d\n", piece.cols, piece.rows);
 
     ocr.SetImage(piece.data, piece.cols, piece.rows, 3, piece.step);
-    std::string outText = std::string(ocr.GetUTF8Text());
-    if (outText.empty()) {
-      // std::cout << "Nothing found \n";
-    } else {
-      found.push_back(outText);
-      // std::cout << outText << std::endl;
+    std::string text = std::string(ocr.GetUTF8Text());
+    if (!text.empty()) {
+      // Remove training new line
+      if (text[text.length()-1] == '\n') {
+        text.erase(text.length()-1);
+      }
+      // Make sure to remove whitespace around it
+      trim(text);
+      // If it was only character, need another check
+      if (!text.empty()) {
+        found.push_back(text);
+      }
     }
 
     ocr.Clear();
@@ -368,9 +400,6 @@ std::vector<std::string> detect_text(
 ) {
   std::vector<Similarty> ls = find_similar(text_color, mask);
 
-  std::vector<std::string> tmp = {std::string("test")};
-
-  
   int i = 0;
   for (; i < ls.size() && ls[i].distance < similarity_cut_off; i+= 1) {}
   ls.resize(i);
@@ -380,8 +409,6 @@ std::vector<std::string> detect_text(
   for (Similarty& s: ls) {
     output.at<unsigned char>(s.x, s.y) = (unsigned char)255;
   }
-
-  // return tmp;
 
   // Text will flow horizontally, meaning if we are scanning, it's
   // best to try with a rectange
@@ -422,7 +449,7 @@ int main() {
 
     cv::Vec3f c1 = RBG2LAB(199,158,80);
     while (true) {
-      printf("Starting\n");
+      // printf("Starting\n");
       // auto [ cropped, mask ] = xp_drop_image(filename);
       // cv::Mat cvImage = cropped;
       cv::Mat cvImage = screenshot(disp, runescape);
@@ -452,12 +479,12 @@ int main() {
       std::vector<std::string> found_text =
         detect_text(cropped, mask, c1, box_width, similarity_cut_off);
 
-      printf("------------------------------------\n");
+      // printf("------------------------------------\n");
       for (auto text: found_text) {
         printf("[%s]\n", text.c_str());
       }
-      printf("------------------------------------\n");
-      sleep(1);
+      // printf("------------------------------------\n");
+      sleep(0.1);
       // std::this_thread::sleep_for(std::chrono::seconds(1));
     }
    
