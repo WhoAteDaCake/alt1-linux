@@ -40,6 +40,8 @@ struct ClusterMeta {
   cv::Point ltc;
   // Right bottom corner 
   cv::Point rbc;
+  int width;
+  int height;
 };
 
 bool similarity_sort(Similarty i, Similarty j) {
@@ -201,6 +203,9 @@ Clusters cluster_pixels(cv::Mat &image, int min_n, float epsilon) {
   return point_map;
 }
 
+/**
+ * Return clusters which are presumed to be text rectangles
+ */
 std::map<int, ClusterMeta> rectangles_only (Clusters& clusters) {
   std::map<int, ClusterMeta> filtered;
   for (auto &it: clusters) {
@@ -221,15 +226,68 @@ std::map<int, ClusterMeta> rectangles_only (Clusters& clusters) {
         br.y = p.y;
       }
     }
-    double top = abs(br.x - lc.x);
-    double side = abs(lc.y - br.y);
+    int width = abs(br.x - lc.x);
+    int height = abs(lc.y - br.y);
     // We have a text rectangle 
-    if (top > side * 2) {
-      ClusterMeta meta = { it.second, lc, br };
+    if (width > height * 2) {
+      ClusterMeta meta = { it.second, lc, br, width, height };
       filtered[it.first] = meta;
     }
   }
   return filtered;
+}
+
+/**
+ * @param clusters found clusters that might contain text
+ * @param rows rows of original matrix
+ * @param cols cols of original matrix
+ */
+std::vector<std::string> extract_text(std::map<int, ClusterMeta> &clusters, int rows, int cols) {
+  std::vector<std::string> found;
+
+  tesseract::TessBaseAPI *ocr = new tesseract::TessBaseAPI();
+  ocr->Init(NULL, "eng", tesseract::OEM_LSTM_ONLY);
+  // ocr->Init(NULL, "eng", tesseract::OEM_LSTM_ONLY);
+  ocr->SetPageSegMode(tesseract::PSM_AUTO);
+  
+  // TODO: Potential optimisation of normalizing coordinates, instead
+  // of doing 2 clones
+  // So we can create a smaller Matrix straight away
+  for (auto &it: clusters) {
+    // Could move outside, as clusters should never overlap
+    cv::Mat cluster_view(rows, cols, CV_8UC3, cv::Vec3b(255, 255, 255));
+    auto data = it.second;
+    for (cv::Point2i p: data.points) {
+      cluster_view.at<cv::Vec3b>(p.y, p.x) = cv::Vec3b(0, 0, 0);
+    }
+    cv::Mat piece = cluster_view(cv::Rect(
+      // X
+      data.ltc.x,
+      // Y
+      data.ltc.y,
+      // Width
+      data.width,
+      // Height (Xp drops start in middle of the screen)
+      data.height
+    ));
+    // OCR
+
+    ocr->SetImage(piece.data, piece.cols, piece.rows, 3, piece.step);
+    std::string outText = std::string(ocr->GetUTF8Text());
+    if (outText.empty()) {
+      // std::cout << "Nothing found \n";
+    } else {
+      found.push_back(outText);
+      // std::cout << outText << std::endl;
+    }
+
+    ocr->Clear();
+  }
+  ocr->End();
+  // Should move ocr outside for optimistaion ?
+  delete ocr;
+
+  return found;
 }
 
 int main() {
@@ -255,19 +313,10 @@ int main() {
 
   // Run clustering algorithm to isolate groups
   auto clusters = cluster_pixels(cleaned, 10, box_width);
-  cv::Mat cluster_view(cropped.rows, cropped.cols, CV_8UC3, cv::Vec3b(0, 0, 0));
+  
   auto rectangle_clusters = rectangles_only(clusters);
-  for (auto &it: rectangle_clusters) {
-    // cv::Vec3b color = cv::Vec3b(rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256));
-    // for (cv::Point2i p: it.second.points) {
-    //   cluster_view.at<cv::Vec3b>(p.y, p.x) = color;
-    // }
-  }
-  cv::namedWindow(source_window);
-  cv::imshow(source_window, cluster_view);
-  cv::waitKey(0);
-  // cv::imshow(source_window, cluster_view);
-  // cv::waitKey(0);
+  auto text_content = extract_text(rectangle_clusters, cropped.rows, cropped.cols);
+  // cv::namedWindow(source_window);
 
   return 0;
 }
