@@ -13,6 +13,11 @@
 #include <algorithm> 
 #include <map>
 #include <tuple>
+#include <unistd.h>
+
+#include <X11/Xlib.h>
+#include <X11/Xatom.h>
+#include <X11/Xutil.h>
 
 #include <chrono>
 #include <thread>
@@ -47,6 +52,72 @@ struct ClusterMeta {
 bool similarity_sort(Similarty i, Similarty j) {
   bool result = i.distance < j.distance;
   return result;
+}
+
+
+Window *winlist (Display *disp, unsigned long *len) {
+    Atom prop = XInternAtom(disp,"_NET_CLIENT_LIST",False), type;
+    int form;
+    unsigned long remain;
+    unsigned char *list;
+ 
+    errno = 0;
+    if (XGetWindowProperty(disp,XDefaultRootWindow(disp),prop,0,1024,False,XA_WINDOW,
+                &type,&form,len,&remain,&list) != Success) {
+        perror("winlist() -- GetWinProp");
+        return 0;
+    }
+     
+    return (Window*)list;
+}
+ 
+ 
+char *winame (Display *disp, Window win) {
+    Atom prop = XInternAtom(disp,"WM_NAME",False), type;
+    int form;
+    unsigned long remain, len;
+    unsigned char *list;
+ 
+    errno = 0;
+    if (XGetWindowProperty(disp,win,prop,0,1024,False,XA_STRING,
+                &type,&form,&len,&remain,&list) != Success) {
+        perror("winlist() -- GetWinProp");
+        return NULL;
+    }
+ 
+    return (char*)list;
+}
+
+cv::Mat screenshot(Display *disp, Window window_id) {
+  XWindowAttributes attr;
+  XGetWindowAttributes(disp, window_id, &attr);
+
+  int width = attr.width;
+  int height = attr.height;
+  XImage* img = XGetImage(
+    disp,
+    window_id,
+    0,
+    0,
+    attr.width,
+    attr.height,
+    AllPlanes,
+    ZPixmap
+  );
+
+  int bits_per_px = img->bits_per_pixel;
+
+  cv::Mat output(height, width, bits_per_px > 24 ? CV_8UC4 : CV_8UC3, img->data), result;
+  if (bits_per_px > 24) {
+    cv::cvtColor(output, result, cv::COLOR_RGBA2RGB);
+  } else {
+    result = output;
+  }
+  XDestroyImage(img);
+  return result;
+  // return img;
+  //Mat(Size(Height, Width), Bpp > 24 ? CV_8UC4 : CV_8UC3, &Pixels[0]); 
+  // cv::Mat cvImage = cv::Mat(attr.height, attr.width, CV_8UC4, img->data);
 }
 
 // Returns a Vec3f with converted LAB color scheme
@@ -125,19 +196,18 @@ std::vector<Similarty> find_similar(cv::Vec3f &col, cv::Mat& image) {
  * - Removes isolated pixels by checking within provided box radius
  * - If there are less than min_n neighbours, it will remove all pixels within the box
  */ 
-cv::Mat remove_isolated_pixels(cv::Mat &image, cv::Size box, int min_n) {
-  cv::Mat dst = image.clone();
+cv::Mat remove_isolated_pixels(cv::Mat &input, cv::Size box, int min_n) {
+  cv::Mat image = input.clone();
 
-  std::vector<cv::Point2i> ls;
-
-  for (int x = 0; x < (dst.rows - box.height); x += box.height) {
-    for (int y = 0; y < (dst.cols - box.width); y += box.width) {
+  for (int x = 0; x < (image.rows - box.height); x += box.height) {
+    for (int y = 0; y < (image.cols - box.width); y += box.width) {
       // printf("Runing (%d, %d)\n", x, y);
       // Empty vector
-      ls.clear();
-      for (int x1= 0; x1 < box.height && x + x1 < dst.rows; x1 += 1) {
-        for (int y1 = 0; y1 < box.width && y + y1 < dst.cols; y1 += 1) {
-          int value = (uchar)dst.at<uchar>(x + x1, y + y1);
+      std::vector<cv::Point2i> ls;
+      // ls.clear();
+      for (int x1= 0; x1 < box.height && x + x1 < image.rows; x1 += 1) {
+        for (int y1 = 0; y1 < box.width && y + y1 < image.cols; y1 += 1) {
+          int value = (uchar)image.at<uchar>(x + x1, y + y1);
           if (value == 255) {
             ls.push_back(cv::Point2i(x + x1, y + y1));
           }
@@ -146,12 +216,13 @@ cv::Mat remove_isolated_pixels(cv::Mat &image, cv::Size box, int min_n) {
       // Validate that enough neighbours exist
       if (ls.size() != 0 && ls.size() < min_n) {
         for (cv::Point2i p: ls) {
-          dst.at<uchar>(p.x, p.y) = 1;
+          image.at<uchar>(p.x, p.y) = 1;
         }
       }
+      ls.clear();
     }
   }
-  return dst;
+  return image;
 }
 
 /**
@@ -185,7 +256,7 @@ Clusters cluster_pixels(cv::Mat &image, int min_n, float epsilon) {
   ds.run();
 
   Clusters point_map;
-  for (int i = 0; i < ds.getTotalPointSize(); i += 1) {
+   for (int i = 0; i < ds.getTotalPointSize(); i += 1) {
     dbscan::Point p = ds.m_points[i];
     if (p.clusterID == UNCLASSIFIED) {
       continue;
@@ -245,10 +316,10 @@ std::map<int, ClusterMeta> rectangles_only (Clusters& clusters) {
 std::vector<std::string> extract_text(std::map<int, ClusterMeta> &clusters, int rows, int cols) {
   std::vector<std::string> found;
 
-  tesseract::TessBaseAPI *ocr = new tesseract::TessBaseAPI();
-  ocr->Init(NULL, "eng", tesseract::OEM_LSTM_ONLY);
+  tesseract::TessBaseAPI ocr = tesseract::TessBaseAPI();
+  ocr.Init(NULL, "eng", tesseract::OEM_LSTM_ONLY);
   // ocr->Init(NULL, "eng", tesseract::OEM_LSTM_ONLY);
-  ocr->SetPageSegMode(tesseract::PSM_AUTO);
+  ocr.SetPageSegMode(tesseract::PSM_AUTO);
   
   // TODO: Potential optimisation of normalizing coordinates, instead
   // of doing 2 clones
@@ -272,8 +343,8 @@ std::vector<std::string> extract_text(std::map<int, ClusterMeta> &clusters, int 
     ));
     // OCR
 
-    ocr->SetImage(piece.data, piece.cols, piece.rows, 3, piece.step);
-    std::string outText = std::string(ocr->GetUTF8Text());
+    ocr.SetImage(piece.data, piece.cols, piece.rows, 3, piece.step);
+    std::string outText = std::string(ocr.GetUTF8Text());
     if (outText.empty()) {
       // std::cout << "Nothing found \n";
     } else {
@@ -281,38 +352,41 @@ std::vector<std::string> extract_text(std::map<int, ClusterMeta> &clusters, int 
       // std::cout << outText << std::endl;
     }
 
-    ocr->Clear();
+    ocr.Clear();
   }
-  ocr->End();
+  ocr.End();
   // Should move ocr outside for optimistaion ?
-  delete ocr;
-
   return found;
 }
 
 std::vector<std::string> detect_text(
-  cv::Mat image,
-  cv::Mat mask,
-  cv::Vec3f text_color,
+  cv::Mat &image,
+  cv::Mat &mask,
+  cv::Vec3f &text_color,
   int cluster_radius,
   float similarity_cut_off
 ) {
   std::vector<Similarty> ls = find_similar(text_color, mask);
 
-  // 
+  std::vector<std::string> tmp = {std::string("test")};
+
+  
   int i = 0;
   for (; i < ls.size() && ls[i].distance < similarity_cut_off; i+= 1) {}
   ls.resize(i);
 
   // Draw points on an empty Mat
-  cv::Mat output(image.rows, image.cols, CV_8U, 1);
+  cv::Mat output(image.size(), CV_8U, (uchar) 1);
   for (Similarty& s: ls) {
-    output.at<uchar>(s.x, s.y) = (uchar)255;
+    output.at<unsigned char>(s.x, s.y) = (unsigned char)255;
   }
+
+  // return tmp;
 
   // Text will flow horizontally, meaning if we are scanning, it's
   // best to try with a rectange
   cv::Mat cleaned = remove_isolated_pixels(output, cv::Size(8, 4), 4);
+
 
   // Run clustering algorithm to isolate groups
   auto clusters = cluster_pixels(cleaned, 10, cluster_radius);
@@ -324,16 +398,86 @@ std::vector<std::string> detect_text(
 int main() {
   float similarity_cut_off = 25.0;
 
-  auto [ cropped, mask ] = xp_drop_image(filename);
-
-  cv::Vec3f c1 = RBG2LAB(199,158,80);
-  std::vector<std::string> found_text =
-    detect_text(cropped, mask, c1, box_width, similarity_cut_off);
+      int i;
+    unsigned long len;
+    Display *disp = XOpenDisplay(NULL);
+    Window *list;
+ 
+    if (!disp) {
+      puts("no display!");
+      return -1;
+    }
+ 
+    list = (Window*)winlist(disp,&len);
+    Window runescape;
   
-  printf("------------------------------------\n");
-  for (auto text: found_text) {
-    printf("[%s]\n", text.c_str());
-  }
+    for (i=0;i<(int)len;i++) {
+        std::string name(winame(disp,list[i]));
+        if (name == "RuneScape") {
+          runescape = list[i];
+          printf("Window found\n");
+          break;
+        }   
+    }
+
+    cv::Vec3f c1 = RBG2LAB(199,158,80);
+    while (true) {
+      printf("Starting\n");
+      // auto [ cropped, mask ] = xp_drop_image(filename);
+      // cv::Mat cvImage = cropped;
+      cv::Mat cvImage = screenshot(disp, runescape);
+      
+      int height = cvImage.rows;
+      int width = cvImage.cols;
+      cv::Mat cropped = cvImage(cv::Rect(
+        // X
+        width / 2 - box_width / 2,
+        // Y
+        0,
+        // Width
+        box_width,
+        // Height (Xp drops start in middle of the screen)
+        height / 2
+      ));
+
+      cv::Mat mask, tmp_mask;
+      /*
+        OpenCV normalizes Lab to 255 range
+        L ← L * 255/100 ; a ← a + 128 ; b ← b + 128
+        But if we use 32F it doesn't 
+      */
+      cropped.convertTo(tmp_mask, CV_32FC3, 1.0/0xff);
+      cv::cvtColor(tmp_mask, mask, cv::COLOR_BGR2Lab);
+
+      std::vector<std::string> found_text =
+        detect_text(cropped, mask, c1, box_width, similarity_cut_off);
+
+      printf("------------------------------------\n");
+      for (auto text: found_text) {
+        printf("[%s]\n", text.c_str());
+      }
+      printf("------------------------------------\n");
+      sleep(1);
+      // std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+   
+
+
+  // auto [ cropped, mask ] = xp_drop_image(filename);
+
+  // cv::Vec3f c1 = RBG2LAB(199,158,80);
+  // std::vector<std::string> found_text =
+  //   detect_text(cropped, mask, c1, box_width, similarity_cut_off);
+  
+  // printf("------------------------------------\n");
+  // for (auto text: found_text) {
+  //   printf("[%s]\n", text.c_str());
+  // }
+  // cv::Mat cvImage = screenshot(disp, runescape);
+  // cv::namedWindow( source_window );
+  // cv::imshow( source_window, cvImage);
+  
+  // cv::waitKey();
 
   return 0;
 }
