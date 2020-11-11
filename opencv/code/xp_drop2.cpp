@@ -290,19 +290,22 @@ std::vector<std::string> extract_text(std::map<int, ClusterMeta> &clusters, int 
   return found;
 }
 
-int main() {
-  float similarity_cut_off = 25.0;
+std::vector<std::string> detect_text(
+  cv::Mat image,
+  cv::Mat mask,
+  cv::Vec3f text_color,
+  int cluster_radius,
+  float similarity_cut_off
+) {
+  std::vector<Similarty> ls = find_similar(text_color, mask);
 
-  auto [ cropped, mask ] = xp_drop_image(filename);
-
-  cv::Vec3f c1 = RBG2LAB(199,158,80);
-  std::vector<Similarty> ls = find_similar(c1, mask);
+  // 
   int i = 0;
   for (; i < ls.size() && ls[i].distance < similarity_cut_off; i+= 1) {}
   ls.resize(i);
 
   // Draw points on an empty Mat
-  cv::Mat output(cropped.rows, cropped.cols, CV_8U, 1);
+  cv::Mat output(image.rows, image.cols, CV_8U, 1);
   for (Similarty& s: ls) {
     output.at<uchar>(s.x, s.y) = (uchar)255;
   }
@@ -312,11 +315,25 @@ int main() {
   cv::Mat cleaned = remove_isolated_pixels(output, cv::Size(8, 4), 4);
 
   // Run clustering algorithm to isolate groups
-  auto clusters = cluster_pixels(cleaned, 10, box_width);
+  auto clusters = cluster_pixels(cleaned, 10, cluster_radius);
   
   auto rectangle_clusters = rectangles_only(clusters);
-  auto text_content = extract_text(rectangle_clusters, cropped.rows, cropped.cols);
-  // cv::namedWindow(source_window);
+  return extract_text(rectangle_clusters, image.rows, image.cols);
+}
+
+int main() {
+  float similarity_cut_off = 25.0;
+
+  auto [ cropped, mask ] = xp_drop_image(filename);
+
+  cv::Vec3f c1 = RBG2LAB(199,158,80);
+  std::vector<std::string> found_text =
+    detect_text(cropped, mask, c1, box_width, similarity_cut_off);
+  
+  printf("------------------------------------\n");
+  for (auto text: found_text) {
+    printf("[%s]\n", text.c_str());
+  }
 
   return 0;
 }
