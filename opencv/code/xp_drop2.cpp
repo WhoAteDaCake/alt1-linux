@@ -325,7 +325,7 @@ std::map<int, ClusterMeta> rectangles_only (Clusters& clusters) {
     // We have a text rectangle 
     // + higher than font 12
     // Might change in the future
-    if ((float)width > 1.5 * (float)height && height > 10) {
+    if ((float)width > 1.5 * (float)height && height > 10 && width > 10) {
       ClusterMeta meta = { it.second, lc, br, width, height };
       filtered[it.first] = meta;
     }
@@ -357,7 +357,7 @@ std::vector<std::string> extract_text(std::map<int, ClusterMeta> &clusters, int 
     for (cv::Point2i p: data.points) {
       cluster_view.at<cv::Vec3b>(p.y, p.x) = cv::Vec3b(0, 0, 0);
     }
-    cv::Mat tmp = cluster_view(cv::Rect(
+    cv::Mat piece = cluster_view(cv::Rect(
       // X
       data.ltc.x,
       // Y
@@ -367,8 +367,12 @@ std::vector<std::string> extract_text(std::map<int, ClusterMeta> &clusters, int 
       // Height (Xp drops start in middle of the screen)
       data.height
     ));
-    cv::Mat piece;
-    cv::resize(tmp, piece, cv::Size(), 2, 2);
+
+    // cv::imshow(source_window, piece);
+    // cv::waitKey(200);
+
+    // cv::Mat piece;// = tmp;
+    // cv::resize(tmp, piece, cv::Size(), 4, 4);
     // OCR
     // printf("Width: %d, Height: %d\n", piece.cols, piece.rows);
 
