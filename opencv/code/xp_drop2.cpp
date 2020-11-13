@@ -368,14 +368,6 @@ std::vector<std::string> extract_text(std::map<int, ClusterMeta> &clusters, int 
       data.height
     ));
 
-    // cv::imshow(source_window, piece);
-    // cv::waitKey(200);
-
-    // cv::Mat piece;// = tmp;
-    // cv::resize(tmp, piece, cv::Size(), 4, 4);
-    // OCR
-    // printf("Width: %d, Height: %d\n", piece.cols, piece.rows);
-
     ocr.SetImage(piece.data, piece.cols, piece.rows, 3, piece.step);
     std::string text = std::string(ocr.GetUTF8Text());
     if (!text.empty()) {
