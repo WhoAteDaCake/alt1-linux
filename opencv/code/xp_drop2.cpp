@@ -25,12 +25,17 @@
 #include <dbscan.h>
 #include <CIEDE2000.h>
 
+#include <loguru.hpp>
+#include <loguru.cpp>
+
+
 typedef std::map<int, std::vector<cv::Point>> Clusters;
 
 std::string filename = "/home/augustinas/projects/github/alt1-linux/opencv/tmp/xp_drop.jpg";
 const char* source_window = "Source image";
 int box_width = 200;
 cv::RNG rng(12345);
+cv::Mat tmp;
 
 struct Similarty {
   float distance;
@@ -219,12 +224,10 @@ std::vector<Similarty> find_similar(cv::Vec3f &col, cv::Mat& image) {
 cv::Mat remove_isolated_pixels(cv::Mat &input, cv::Size box, int min_n) {
   cv::Mat image = input.clone();
 
+  std::vector<cv::Point2i> ls;
   for (int x = 0; x < (image.rows - box.height); x += box.height) {
     for (int y = 0; y < (image.cols - box.width); y += box.width) {
-      // printf("Runing (%d, %d)\n", x, y);
-      // Empty vector
-      std::vector<cv::Point2i> ls;
-      // ls.clear();
+      // Box iteration
       for (int x1= 0; x1 < box.height && x + x1 < image.rows; x1 += 1) {
         for (int y1 = 0; y1 < box.width && y + y1 < image.cols; y1 += 1) {
           int value = (uchar)image.at<uchar>(x + x1, y + y1);
@@ -414,6 +417,18 @@ std::vector<std::string> detect_text(
   // best to try with a rectange
   cv::Mat cleaned = remove_isolated_pixels(output, cv::Size(8, 4), 4);
 
+  // DEBUG
+  cv::Vec3b white(255, 255, 255);
+  tmp = cv::Mat(cleaned.size(), CV_8UC3, cv::Vec3b(0, 0, 0));
+  for (int x = 0; x < cleaned.rows; x += 1) {
+    for (int y = 0; y < cleaned.cols; y += 1) {
+      if (cleaned.at<uchar>(x, y) == 255) {
+        tmp.at<cv::Vec3b>(x, y) = cv::Vec3b(255, 255, 255);
+      }
+    }
+  }
+  // cv::imshow( source_window, tmp);
+  // cv::waitKey(1);
 
   // Run clustering algorithm to isolate groups
   auto clusters = cluster_pixels(cleaned, 10, cluster_radius);
@@ -422,71 +437,74 @@ std::vector<std::string> detect_text(
   return extract_text(rectangle_clusters, image.rows, image.cols);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+  // Logging tool
+  loguru::init(argc, argv);
+
+  
+
   float similarity_cut_off = 25.0;
 
-      int i;
-    unsigned long len;
-    Display *disp = XOpenDisplay(NULL);
-    Window *list;
- 
-    if (!disp) {
-      puts("no display!");
-      return -1;
+  int i;
+  unsigned long len;
+  Display *disp = XOpenDisplay(NULL);
+  Window *list;
+
+  if (!disp) {
+    puts("no display!");
+    return -1;
+  }
+
+  list = (Window*)winlist(disp,&len);
+  Window runescape;
+
+  for (i=0;i<(int)len;i++) {
+    std::string name(winame(disp,list[i]));
+    if (name == "RuneScape") {
+      runescape = list[i];
+      printf("Window found\n");
+      break;
+      }   
+  }
+
+  cv::Vec3f c1 = RBG2LAB(199,158,80);
+  cv::namedWindow( source_window );
+  while (true) {
+    LOG_F(INFO, "Process starting");
+    cv::Mat cvImage = screenshot(disp, runescape);
+    LOG_F(INFO, "Screenshot taken");
+    
+    int height = cvImage.rows;
+    int width = cvImage.cols;
+    cv::Mat cropped = cvImage(cv::Rect(
+      // X
+      width / 2 - box_width / 2,
+      // Y
+      0,
+      // Width
+      box_width,
+      // Height (Xp drops start in middle of the screen)
+      height / 2
+    ));
+
+    cv::Mat mask, tmp_mask;
+    /*
+      OpenCV normalizes Lab to 255 range
+      L ← L * 255/100 ; a ← a + 128 ; b ← b + 128
+      But if we use 32F it doesn't 
+    */
+    cropped.convertTo(tmp_mask, CV_32FC3, 1.0/0xff);
+    cv::cvtColor(tmp_mask, mask, cv::COLOR_BGR2Lab);
+    LOG_F(INFO, "Image ready for processing");
+
+    std::vector<std::string> found_text =
+      detect_text(cropped, mask, c1, box_width, similarity_cut_off);
+
+    for (auto text: found_text) {
+      LOG_F("Text found: [%s]\n", text.c_str());
     }
- 
-    list = (Window*)winlist(disp,&len);
-    Window runescape;
-  
-    for (i=0;i<(int)len;i++) {
-        std::string name(winame(disp,list[i]));
-        if (name == "RuneScape") {
-          runescape = list[i];
-          printf("Window found\n");
-          break;
-        }   
-    }
-
-    cv::Vec3f c1 = RBG2LAB(199,158,80);
-    while (true) {
-      // printf("Starting\n");
-      // auto [ cropped, mask ] = xp_drop_image(filename);
-      // cv::Mat cvImage = cropped;
-      cv::Mat cvImage = screenshot(disp, runescape);
-      
-      int height = cvImage.rows;
-      int width = cvImage.cols;
-      cv::Mat cropped = cvImage(cv::Rect(
-        // X
-        width / 2 - box_width / 2,
-        // Y
-        0,
-        // Width
-        box_width,
-        // Height (Xp drops start in middle of the screen)
-        height / 2
-      ));
-
-      cv::Mat mask, tmp_mask;
-      /*
-        OpenCV normalizes Lab to 255 range
-        L ← L * 255/100 ; a ← a + 128 ; b ← b + 128
-        But if we use 32F it doesn't 
-      */
-      cropped.convertTo(tmp_mask, CV_32FC3, 1.0/0xff);
-      cv::cvtColor(tmp_mask, mask, cv::COLOR_BGR2Lab);
-
-      std::vector<std::string> found_text =
-        detect_text(cropped, mask, c1, box_width, similarity_cut_off);
-
-      // printf("------------------------------------\n");
-      for (auto text: found_text) {
-        printf("[%s]\n", text.c_str());
-      }
-      // printf("------------------------------------\n");
-      sleep(0.1);
-      // std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
+    sleep(0.1);
+  }
    
 
 

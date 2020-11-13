@@ -11,5 +11,5 @@ g++ -g -std=c++17 \
   $3/opencv/code/include/dbscan.cpp \
   -I$3/opencv/code/include \
   $FLAGS \
-  -o $2
+  -o $2 -lstdc++ -lpthread -ldl 
 # ./basic_ocr "/home/augustinas/projects/github/alt1-linux/opencv/chat4.png"
