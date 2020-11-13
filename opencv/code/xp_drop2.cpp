@@ -32,7 +32,7 @@
 typedef std::map<int, std::vector<cv::Point>> Clusters;
 
 std::string filename = "/home/augustinas/projects/github/alt1-linux/opencv/tmp/xp_drop.jpg";
-const char* source_window = "Source image";
+const char* source_window = "source_image";
 int box_width = 200;
 cv::RNG rng(12345);
 cv::Mat tmp;
@@ -380,7 +380,7 @@ std::vector<std::string> extract_text(std::map<int, ClusterMeta> &clusters, int 
         text.erase(text.length()-1);
       }
       // Make sure to remove whitespace around it
-      trim(text);
+      // trim(text);
       // If it was only character, need another check
       if (!text.empty()) {
         found.push_back(text);
@@ -401,49 +401,99 @@ std::vector<std::string> detect_text(
   int cluster_radius,
   float similarity_cut_off
 ) {
+  LOG_SCOPE_FUNCTION(INFO);
   std::vector<Similarty> ls = find_similar(text_color, mask);
+  LOG_F(INFO, "Found [%d] similar pixels", ls.size());
 
+  // TODO: could be done within find_similar function ?
   int i = 0;
   for (; i < ls.size() && ls[i].distance < similarity_cut_off; i+= 1) {}
   ls.resize(i);
 
+  LOG_F(INFO, "Creating an image for isolate removal", ls.size());
   // Draw points on an empty Mat
   cv::Mat output(image.size(), CV_8U, (uchar) 1);
   for (Similarty& s: ls) {
     output.at<unsigned char>(s.x, s.y) = (unsigned char)255;
   }
 
+  LOG_F(INFO, "Isolated pixel removal", ls.size());
+  // TODO: there might be a better method, witouth creating a new mat.
   // Text will flow horizontally, meaning if we are scanning, it's
   // best to try with a rectange
   cv::Mat cleaned = remove_isolated_pixels(output, cv::Size(8, 4), 4);
+  LOG_F(INFO, "Isolated pixels removed");
 
   // DEBUG
+  #ifdef VISUALISE
+
   cv::Vec3b white(255, 255, 255);
-  tmp = cv::Mat(cleaned.size(), CV_8UC3, cv::Vec3b(0, 0, 0));
+  cv::Mat isolated = cv::Mat(cleaned.size(), CV_8UC3, cv::Vec3b(0, 0, 0));
   for (int x = 0; x < cleaned.rows; x += 1) {
     for (int y = 0; y < cleaned.cols; y += 1) {
       if (cleaned.at<uchar>(x, y) == 255) {
-        tmp.at<cv::Vec3b>(x, y) = cv::Vec3b(255, 255, 255);
+        isolated.at<cv::Vec3b>(x, y) = white;
       }
     }
   }
-  // cv::imshow( source_window, tmp);
-  // cv::waitKey(1);
+  #endif
 
+  // TODO: add all aditional transformations as a side image
+  LOG_F(INFO, "Clustering");
   // Run clustering algorithm to isolate groups
   auto clusters = cluster_pixels(cleaned, 10, cluster_radius);
-  
+  LOG_F(INFO, "Clustering done");
+
+  #ifdef VISUALISE
+  // DEBUG
+  cv::Mat clusters_img = cv::Mat(cleaned.size(), CV_8UC3, cv::Vec3b(0, 0, 0));
+  for (auto &it: clusters) {
+    cv::Vec3b color = cv::Vec3b(rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256));
+    for (auto &p: it.second) {
+      clusters_img.at<cv::Vec3b>(p.y, p.x) = color; 
+    }
+  }
+  #endif
+
   auto rectangle_clusters = rectangles_only(clusters);
-  return extract_text(rectangle_clusters, image.rows, image.cols);
+  LOG_F(INFO, "Rectangles filtered");
+
+  #ifdef VISUALISE
+  cv::Mat rectangles = cv::Mat(cleaned.size(), CV_8UC3, cv::Vec3b(0, 0, 0));
+  for (auto &it: rectangle_clusters) {
+    auto meta = it.second;
+    cv::Vec3b color = cv::Vec3b(rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256));
+    for (auto &p: meta.points) {
+      rectangles.at<cv::Vec3b>(p.y, p.x) = color; 
+    }
+    cv::rectangle(rectangles, meta.ltc, meta.rbc, color);
+  }
+
+  cv::Mat tmp1;
+  cv::hconcat(isolated,clusters_img,tmp1);
+  cv::hconcat(tmp1, rectangles, tmp);
+
+  cv::imshow(source_window, tmp);
+  cv::waitKey(100);
+  #endif
+
+  auto result = extract_text(rectangle_clusters, image.rows, image.cols);
+  LOG_F(INFO, "Text extracted");
+
+  return result;
 }
 
 int main(int argc, char* argv[]) {
   // Logging tool
-  loguru::init(argc, argv);
+  // loguru::init(argc, argv);
+  loguru::g_preamble_file = false;
+  loguru::g_preamble_date = false;
+  loguru::g_preamble_uptime = false;
+  loguru::g_preamble_thread = false;
+  // Disable INFO logging
+  loguru::g_stderr_verbosity = loguru::Verbosity_WARNING;
 
-  
-
-  float similarity_cut_off = 25.0;
+  float similarity_cut_off = 10.0;
 
   int i;
   unsigned long len;
@@ -469,6 +519,7 @@ int main(int argc, char* argv[]) {
 
   cv::Vec3f c1 = RBG2LAB(199,158,80);
   cv::namedWindow( source_window );
+
   while (true) {
     LOG_F(INFO, "Process starting");
     cv::Mat cvImage = screenshot(disp, runescape);
@@ -501,28 +552,10 @@ int main(int argc, char* argv[]) {
       detect_text(cropped, mask, c1, box_width, similarity_cut_off);
 
     for (auto text: found_text) {
-      LOG_F("Text found: [%s]\n", text.c_str());
+      LOG_F(INFO, "Text found: [%s]\n", text.c_str());
     }
     sleep(0.1);
   }
-   
-
-
-  // auto [ cropped, mask ] = xp_drop_image(filename);
-
-  // cv::Vec3f c1 = RBG2LAB(199,158,80);
-  // std::vector<std::string> found_text =
-  //   detect_text(cropped, mask, c1, box_width, similarity_cut_off);
-  
-  // printf("------------------------------------\n");
-  // for (auto text: found_text) {
-  //   printf("[%s]\n", text.c_str());
-  // }
-  // cv::Mat cvImage = screenshot(disp, runescape);
-  // cv::namedWindow( source_window );
-  // cv::imshow( source_window, cvImage);
-  
-  // cv::waitKey();
 
   return 0;
 }
