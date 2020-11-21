@@ -6,7 +6,7 @@
       "command": "${workspaceFolder}/opencv/run.bash",
       "args": [
         "${file}",
-        "${fileDirname}/opencv/exec/${fileBasenameNoExtension}",
+        "${fileDirname}/../exec/${fileBasenameNoExtension}",
         "${workspaceFolder}",
       ],
       "options": {
